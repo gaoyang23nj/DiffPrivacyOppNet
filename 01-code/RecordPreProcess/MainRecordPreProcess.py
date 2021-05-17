@@ -1,38 +1,67 @@
-import math
+# 预处理Nanjing Bike Station 数据
+# 过滤未知站点
 import os
+import pandas as pd
 import datetime
 import numpy as np
 
 
-nanjingbike_input_data = '../NanjingBikeDataset/2017RentReturnData'
-# nanjingbike_interpolation = 'E:\\00-Trace\\01-shanghai_taxi\\taxi_100_interpolation'
+NanjingBike_InputData = '../NanjingBikeDataset/2017RentReturnData'
+Station1Info = '../NanjingBikeDataset/Pukou.xlsx'
+Station2Info = '../NanjingBikeDataset/Qiaobei.xlsx'
 EncoHistDir = '../EncoHistData_NJBike/data.csv'
 EncoHistBadDir = '../EncoHistData_NJBike/data_bad.csv'
+StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
 
+EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+
+# 该class解析文件
 class RecordPreProcess(object):
     def __init__(self):
         # input_file_path
         # self.num_nodes = 100
-        self.input_dir = nanjingbike_input_data
+        self.input_dir = NanjingBike_InputData
         self.output_dir = EncoHistDir
         self.outputbad_dir = EncoHistBadDir
+        self.station_info_path = StationInfoPath
+
         # 每10s保留一个位置
         self.sim_TimeStep = 1
-        # id 文件 真实id对应关系
-        self.list_id = []
-        # 各个节点的时空位置
-        self.list_space_time_loc = []
-        # 也是node_id
-        self.num_nodes = 0
-        self.__preprocess()
         # 每10s一个 ？
         self.MAX_RUNNING_TIMES = 100
+
+        # station id list
+        self.list_station_id = []
+        # station id, inner id, name, list
+        self.list_stationinfo_id = []
+        self.count = 0
+        self.read_station_info(Station1Info)
+        self.read_station_info(Station2Info)
+
+        self.list_instation_id = []
+        self.list_outstation_id = []
+        # id 文件 真实id对应关系
+        self.list_file_id = []
+        self.__preprocess()
         output_obj = open(self.output_dir, 'w+', encoding="utf-8")
         badoutput_obj = open(self.outputbad_dir, 'w+', encoding="utf-8")
-        for tunple in self.list_id:
+        # 提取每月的数据
+        for tunple in self.list_file_id:
             self.extractdata(output_obj, badoutput_obj, tunple)
         badoutput_obj.close()
         output_obj.close()
+
+        # 写入station_info文件
+        station_info_obj = open(self.station_info_path, 'w+', encoding="utf-8")
+        for tmp_station_info in self.list_stationinfo_id:
+            station_info_obj.write('{},{},{}\n'.format(tmp_station_info[0],tmp_station_info[1],tmp_station_info[2]))
+        station_info_obj.close()
+        print(len(self.list_station_id))
+        print(self.list_station_id)
+        print(len(self.list_instation_id))
+        print(len(self.list_outstation_id))
+        print(self.list_instation_id)
+        print(self.list_outstation_id)
 
     def extractdata(self, output_obj, badoutput_obj, tunple):
         filepath = tunple[0]
@@ -47,27 +76,50 @@ class RecordPreProcess(object):
                 break
             else:
                 units = line.replace('"','').split(',')
-                (biswelldefined, output_str) = self.parse_items(units, num_att)
+                (biswelldefined, output_str) = self.__parse_items(units, num_att)
                 if biswelldefined:
                     output_obj.write(output_str)
                 else:
                     badoutput_obj.write(output_str)
 
-    def parse_items(self, units, num_att):
+    # 顺序 (起始站点id, 起始时间, 到达站点id, 到达时间, 起始站点名字, 到达站点名字, )
+    def __parse_items(self, units, num_att):
         if num_att == 46:
-            itemlist = (units[6], units[7], units[14], units[15], units[41], units[42])
+            itemlist = [units[6], units[7], units[14], units[15], units[41], units[42]]
         elif num_att == 10:
-            itemlist = (units[3], units[4], units[6], units[7], units[5], units[8])
-        # check
-        biswelldefined = True
-        for item in itemlist:
-            # 空字符串
-            if len(item) == 0:
-                biswelldefined = False
-            # 未知站点
+            itemlist = [units[3], units[4], units[6], units[7], units[5], units[8]]
+
         output_str = '{},{},{},{},{},{}\n'.format(
             itemlist[0], itemlist[1],itemlist[2],itemlist[3],itemlist[4],itemlist[5])
-        return (biswelldefined, output_str)
+        # check 空字符串
+        biswelldefined = True
+        for item in itemlist:
+            if len(item) == 0:
+                biswelldefined = False
+                return (biswelldefined, output_str)
+        # check 未知站点 src dest
+        itemlist[0] = int(itemlist[0])
+        itemlist[2] = int(itemlist[2])
+        if itemlist[0] not in self.list_station_id:
+            biswelldefined = False
+            if itemlist[0] not in self.list_instation_id:
+                self.list_instation_id.append(itemlist[0])
+        elif itemlist[2] not in self.list_station_id:
+            biswelldefined = False
+            if itemlist[2] not in self.list_outstation_id:
+                self.list_outstation_id.append(itemlist[2])
+            # print(itemlist)
+        # check 同站进出
+        if itemlist[0] == itemlist[2]:
+            biswelldefined = False
+        # check成功
+        if biswelldefined:
+            output_str = '{},{},{},{},{},{},{},{}\n'.format(
+                itemlist[0], itemlist[1], self.list_station_id.index(itemlist[0]),
+                itemlist[2], itemlist[3], self.list_station_id.index(itemlist[2]), itemlist[4], itemlist[5])
+            return (biswelldefined, output_str)
+        else:
+            return (biswelldefined, output_str)
 
     def __preprocess(self):
         # 每个月一个文件
@@ -79,12 +131,68 @@ class RecordPreProcess(object):
             tmpline = oneinput_obj.readline().split(',')
             num_att = len(tmpline)
             oneinput_obj.close()
-            self.list_id.append((filepath, month_id, num_att))
-        # for item in self.list_id:
-        #     print(item)
-        print(self.list_id)
+            self.list_file_id.append((filepath, month_id, num_att))
+
+    def read_station_info(self, station_file_path):
+        station = pd.read_excel(station_file_path, engine='openpyxl')
+        v1 = station.values
+        for i in range(1, len(station.values)):
+            item = (v1[i][1], v1[i][2])
+            if v1[i][1] in self.list_station_id:
+                print('Internal Err! duplicate station id--- in  def read_station_info(self, station_file_path)')
+                break
+            self.list_station_id.append(v1[i][1])
+            self.list_stationinfo_id.append((v1[i][1], self.count, v1[i][2]))
+            self.count = self.count + 1
+
+    def get_station(self):
+        return self.list_stationinfo_id
+
+
+# 该class按照(src,dest)-pair收集数据
+class ResolveSDpair(object):
+    def __init__(self, num_station):
+        self.input_data_dir = EncoHistDir
+        self.output_data_dir = EncoHistDir_SDPair
+        self.list_sdpair_index = []
+        self.list_sdpair_record = []
+        for s_id in range(num_station):
+            for d_id in range(num_station):
+                if s_id == d_id:
+                    continue
+                self.list_sdpair_index.append((s_id, d_id))
+                self.list_sdpair_record.append([])
+        self.divide_all_record_data()
+        for sd_index in range(len(self.list_sdpair_index)):
+            # 写文件
+            s_id, d_id = self.list_sdpair_index[sd_index]
+            new_sdpair_filepath = os.path.join(self.output_data_dir, '{}_{}.csv'.format(s_id, d_id))
+            new_sdpair_file = open(new_sdpair_filepath, 'w+', encoding="utf-8")
+            print(len(self.list_sdpair_record[sd_index]))
+            for line in self.list_sdpair_record[sd_index]:
+                new_sdpair_file.write(line)
+            new_sdpair_file.close()
+
+    def divide_all_record_data(self):
+        input_obj = open(self.input_data_dir, 'r', encoding="utf-8")
+        line = input_obj.readline()
+        while True:
+            line = input_obj.readline()
+            if not line:
+                break
+            else:
+                units = line.split(',')
+                t = (int(units[2]), int(units[5]))
+                sd_index = self.list_sdpair_index.index(t)
+                self.list_sdpair_record[sd_index].append(line)
+        input_obj.close()
 
 
 if __name__=='__main__':
-    RecordPreProcess()
+    RPP = RecordPreProcess()
+    list_station = RPP.get_station()
+    216
+    RSD = ResolveSDpair(len(list_station))
+
+    # RSD = ResolveSDpair(216)
     print('OK')
