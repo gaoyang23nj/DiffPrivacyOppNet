@@ -23,8 +23,13 @@ class Simulator(object):
         # 节点个数默认216个, id 0~215
         self.MAX_NODE_NUM = num_station
         # 最大运行时间 执行时间 36000*24个间隔, 即24hour; 应该根据 enco_hist 进行更新
-        self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
-        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
+        # self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
+        # self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
+
+        self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
+        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/14 23:59:59', "%Y/%m/%d %H:%M:%S")
+        print(self.MIN_RUNNING_TIMES)
+        print(self.MAX_RUNNING_TIMES)
         # 每个间隔的时间长度 0.1s
         # self.sim_TimeStep = 0.1
         # 仿真环境 现在的时刻
@@ -47,12 +52,14 @@ class Simulator(object):
         self.list_gen_eve = []
         # 读取相遇记录
         self.read_enco_hist_file()
-        print('read enco file end!')
+        print('1) read enco file end!')
         print(datetime.datetime.now())
         # winsound.Beep(200, 500)
         self.build_gen_event()
+        print('2) build gen event end!')
         # 初始化各个场景 spamming节点的比例
         self.init_scenario()
+        print('3) init scenario end!')
         # 根据相遇记录执行 各场景分别执行路由
         short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         filename = 'result_' + short_time + '.tmp'
@@ -62,12 +69,6 @@ class Simulator(object):
     def read_enco_hist_file(self):
         file_object = open(self.ENCO_HIST_FILE, 'r', encoding="utf-8")
         tmp_all_lines = file_object.readlines()
-        tm1 = tmp_all_lines[0].split(',')[1]
-        self.MIN_RUNNING_TIMES = datetime.datetime.strptime(tm1, "%Y/%m/%d %H:%M:%S")
-        tm2 = tmp_all_lines[-1].split(',')[1]
-        self.MAX_RUNNING_TIMES = datetime.datetime.strptime(tm2, "%Y/%m/%d %H:%M:%S")
-        print(self.MIN_RUNNING_TIMES)
-        print(self.MAX_RUNNING_TIMES)
         for index in range(len(tmp_all_lines)):
             # 读取相遇记录
             (i_station_id, a_time, i_node, j_station_id, b_time, j_node, i_name, j_name) \
@@ -75,25 +76,32 @@ class Simulator(object):
             tm = datetime.datetime.strptime(a_time, "%Y/%m/%d %H:%M:%S")
             i_node = int(i_node)
             j_node = int(j_node)
-            self.list_enco_hist.append((tm, i_node, j_node))
+            if (tm>=self.MIN_RUNNING_TIMES) and (tm<=self.MAX_RUNNING_TIMES):
+                self.list_enco_hist.append((tm, i_node, j_node))
         file_object.close()
 
     def build_gen_event(self):
-        tmp_time = self.MIN_RUNNING_TIMES
+        gen_time = self.MIN_RUNNING_TIMES
         while True:
-            gen_time = self.MIN_RUNNING_TIMES + self.GENPKT_DELTA_TIME
+            gen_time = gen_time + self.GENPKT_DELTA_TIME
             if gen_time > self.MAX_RUNNING_TIMES:
                 break
             (src_index, dst_index) = self.__gen_pair_randint(self.MAX_NODE_NUM)
             self.list_gen_eve.append((gen_time, self.pktid_nextgen, src_index, dst_index))
             self.pktid_nextgen = self.pktid_nextgen + 1
+        print('num_gen_eve:', len(self.list_gen_eve))
 
     def run(self):
+        tmp = self.MIN_RUNNING_TIMES
+
         while self.sim_TimeNow <= self.MAX_RUNNING_TIMES:
+            if tmp + datetime.timedelta(days=1) < self.sim_TimeNow:
+                tmp = self.sim_TimeNow
+                print(self.sim_TimeNow)
+            gen_time = self.MAX_RUNNING_TIMES
+            enco_time = self.MAX_RUNNING_TIMES
             if len(self.list_gen_eve) == 0 and len(self.list_enco_hist) == 0:
                 break
-            gen_time = sys.maxsize
-            enco_time = sys.maxsize
             if len(self.list_gen_eve)>0:
                 gen_time = self.list_gen_eve[0][0]
             if len(self.list_enco_hist)>0:
@@ -102,21 +110,21 @@ class Simulator(object):
                 self.sim_TimeNow = gen_time
                 # 执行报文生成
                 # controller记录这个pkt
+                print(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3])
                 self.list_genpkt.append((self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 # 各scenario生成pkt, pkt大小为100k
-                print('time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
+                print('GEN EVE: time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 for key, value in self.scenaDict.items():
                     value.gennewpkt(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3], self.sim_TimeNow, 500)
                 # 删除这个生成事件 以便继续进行
                 self.list_gen_eve.pop(0)
             if gen_time >= enco_time:
                 self.sim_TimeNow = enco_time
-                # 执行相遇事件list 同一时刻可能有多个相遇事件
-                tmp_enc = self.list_enco_hist[0][1:]
-                for enc_eve in tmp_enc:
-                    for key, value in self.scenaDict.items():
-                        value.swappkt(self.sim_TimeNow, enc_eve[2], enc_eve[3])
-                        # value.swappkt(self.sim_TimeNow, enc_eve[3], enc_eve[2])
+                # 执行相遇事件list
+                tmp_enc = self.list_enco_hist[0]
+                for key, value in self.scenaDict.items():
+                    value.swappkt(self.sim_TimeNow, tmp_enc[1], tmp_enc[2])
+                    # value.swappkt(self.sim_TimeNow, enc_eve[3], enc_eve[2])
                 self.list_enco_hist.pop(0)
         assert(len(self.list_gen_eve)==0 and len(self.list_enco_hist)==0)
 
@@ -134,7 +142,7 @@ class Simulator(object):
         # list_scena = self.init_scenario_testOur()
         return list_scena
 
-    def init_scenario_testv3(self):
+    def init_scenario_testProphet(self):
         index = -1
         # ===============================场景1 Prophet ===================================
         index += 1

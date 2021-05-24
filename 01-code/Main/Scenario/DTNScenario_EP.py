@@ -5,12 +5,14 @@ from Main.DTNNodeBuffer import DTNNodeBuffer
 from Main.DTNPkt import DTNPkt
 
 import copy
+import datetime
 
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
 class DTNScenario_EP(object):
     # node_id的list routingname的list
     def __init__(self, scenarioname, num_of_nodes, buffer_size):
         self.scenarioname = scenarioname
+        self.num_comm = 0
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
         for node_id in range(num_of_nodes):
@@ -62,12 +64,13 @@ class DTNScenario_EP(object):
         for tmp_pkt in totran_pktlist:
             # 若抵达的是目的节点(即b_id == tmp_pkt.dst_id) 则a_id删掉该pkt的副本
             isReach = self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
+            self.num_comm = self.num_comm + 1
             if isReach:
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
 
     def print_res(self, listgenpkt):
         output_str = '{}\n'.format(self.scenarioname)
-        total_delay = 0
+        total_delay = datetime.timedelta(seconds=0)
         total_succnum = 0
         total_pkt_hold = 0
         for i_id in range(len(self.listNodeBuffer)):
@@ -89,6 +92,6 @@ class DTNScenario_EP(object):
             output_str += 'succ_ratio:{} avg_delay:null\n'.format(succ_ratio)
         output_str += 'total_hold:{} total_gen:{}, total_succ:{}\n'.format(total_pkt_hold, len(listgenpkt), total_succnum)
         print(output_str)
-        res = (succ_ratio, avg_delay)
-        config = ()
+        res = {'succ_ratio': succ_ratio, 'avg_delay': avg_delay, 'num_comm': self.num_comm}
+        config = {'ratio_bk_nodes': 0, 'drop_prob': 1}
         return output_str, res, config

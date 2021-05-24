@@ -1,3 +1,4 @@
+import datetime
 
 class DTNPkt(object):
     def __init__(self, pkt_id, src_id, dst_id, gentime, pkt_size):
@@ -8,7 +9,7 @@ class DTNPkt(object):
         self.pkt_size = pkt_size
         self.TTL = 0
         self.hops = 0
-        self.succ_time = -1
+        self.succ_time = datetime.datetime.now()
 
 class DTNPktSandW(DTNPkt):
     def __init__(self, pkt_id, src_id, dst_id, gentime, pkt_size, token):
