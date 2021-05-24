@@ -1,10 +1,11 @@
 # 预处理Nanjing Bike Station 数据
-# 过滤未知站点
+# 1.过滤未知站点 生成'../EncoHistData_NJBike/data.csv'
+# 2.按照Src-Dst Pair 生成 '../EncoHistData_NJBike/SDPair_NJBike_Data'
+# 3.每个文件按照时间顺序排列
 import os
 import pandas as pd
+import time
 import datetime
-import numpy as np
-
 
 NanjingBike_InputData = '../NanjingBikeDataset/2017RentReturnData'
 Station1Info = '../NanjingBikeDataset/Pukou.xlsx'
@@ -90,7 +91,7 @@ class RecordPreProcess(object):
             itemlist = [units[3], units[4], units[6], units[7], units[5], units[8]]
 
         output_str = '{},{},{},{},{},{}\n'.format(
-            itemlist[0], itemlist[1],itemlist[2],itemlist[3],itemlist[4],itemlist[5])
+            itemlist[0], itemlist[1], itemlist[2], itemlist[3], itemlist[4], itemlist[5])
         # check 空字符串
         biswelldefined = True
         for item in itemlist:
@@ -137,7 +138,6 @@ class RecordPreProcess(object):
         station = pd.read_excel(station_file_path, engine='openpyxl')
         v1 = station.values
         for i in range(1, len(station.values)):
-            item = (v1[i][1], v1[i][2])
             if v1[i][1] in self.list_station_id:
                 print('Internal Err! duplicate station id--- in  def read_station_info(self, station_file_path)')
                 break
@@ -154,7 +154,9 @@ class ResolveSDpair(object):
     def __init__(self, num_station):
         self.input_data_dir = EncoHistDir
         self.output_data_dir = EncoHistDir_SDPair
+        # 保存src-dst id
         self.list_sdpair_index = []
+        # 保存src-dst record
         self.list_sdpair_record = []
         for s_id in range(num_station):
             for d_id in range(num_station):
@@ -168,11 +170,12 @@ class ResolveSDpair(object):
             s_id, d_id = self.list_sdpair_index[sd_index]
             new_sdpair_filepath = os.path.join(self.output_data_dir, '{}_{}.csv'.format(s_id, d_id))
             new_sdpair_file = open(new_sdpair_filepath, 'w+', encoding="utf-8")
-            print(len(self.list_sdpair_record[sd_index]))
+            # print(len(self.list_sdpair_record[sd_index]))
             for line in self.list_sdpair_record[sd_index]:
                 new_sdpair_file.write(line)
             new_sdpair_file.close()
 
+    # 按照src-dest pair进行文件划分
     def divide_all_record_data(self):
         input_obj = open(self.input_data_dir, 'r', encoding="utf-8")
         line = input_obj.readline()
@@ -188,11 +191,65 @@ class ResolveSDpair(object):
         input_obj.close()
 
 
+
+def seq_datacsv():
+    list_seq_record = []
+    output_obj = open(EncoHistDir, 'r', encoding="utf-8")
+    while True:
+        line = output_obj.readline()
+        if not line:
+            break
+        else:
+            uints = line.split(',')
+            tm = time.strptime(uints[1], "%Y/%m/%d %H:%M:%S")
+            list_seq_record.append((tm, line))
+    output_obj.close()
+    list_seq_record.sort()
+
+    output_obj = open(EncoHistDir, 'w+', encoding="utf-8")
+    for i in range(len(list_seq_record)):
+        output_obj.write(list_seq_record[i][1])
+    output_obj.close()
+
+def seq_sdpaircsv(num_station):
+    output_data_dir = EncoHistDir_SDPair
+    list_sdpair_index = []
+    for s_id in range(num_station):
+        for d_id in range(num_station):
+            if s_id == d_id:
+                continue
+            list_sdpair_index.append((s_id, d_id))
+    for sd_index in range(len(list_sdpair_index)):
+        # 写文件
+        s_id, d_id = list_sdpair_index[sd_index]
+        new_sdpair_filepath = os.path.join(output_data_dir, '{}_{}.csv'.format(s_id, d_id))
+        new_sdpair_file = open(new_sdpair_filepath, 'r', encoding="utf-8")
+        list_seq_record = []
+        while True:
+            line = new_sdpair_file.readline()
+            if not line:
+                break
+            else:
+                uints = line.split(',')
+                tm = time.strptime(uints[1], "%Y/%m/%d %H:%M:%S")
+                list_seq_record.append((tm, line))
+        new_sdpair_file.close()
+        list_seq_record.sort()
+        output_obj = open(new_sdpair_filepath, 'w+', encoding="utf-8")
+        for i in range(len(list_seq_record)):
+            output_obj.write(list_seq_record[i][1])
+        output_obj.close()
+
 if __name__=='__main__':
+    print(datetime.datetime.now())
+    # 1.删除无效数据
     RPP = RecordPreProcess()
     list_station = RPP.get_station()
-    216
+    # 2.按照src-dst划分
     RSD = ResolveSDpair(len(list_station))
-
+    # 3.按照时间排序
+    seq_datacsv()
+    seq_sdpaircsv(len(list_station))
     # RSD = ResolveSDpair(216)
+    print(datetime.datetime.now())
     print('OK')

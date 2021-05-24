@@ -5,3 +5,4 @@
 01-code/.idea/
 01-code/EncoHistData_NJBike/*.csv
 01-code/EncoHistData_NJBike/SDPair_NJBike_Data/*.csv
+*.pyc
