@@ -4,17 +4,18 @@ from Main.DTNPkt import DTNPkt
 import copy
 import numpy as np
 import math
+import datetime
 
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
 class DTNScenario_Prophet(object):
     # node_id的list routingname的list
-    def __init__(self, scenarioname, num_of_nodes, buffer_size):
+    def __init__(self, scenarioname, num_of_nodes, min_time, buffer_size):
         self.scenarioname = scenarioname
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
         self.listRouter = []
         for node_id in range(num_of_nodes):
-            tmpRouter = RoutingProphet(node_id, num_of_nodes)
+            tmpRouter = RoutingProphet(node_id, num_of_nodes, min_time)
             self.listRouter.append(tmpRouter)
             tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size)
             self.listNodeBuffer.append(tmpBuffer)
@@ -81,7 +82,7 @@ class DTNScenario_Prophet(object):
 
     def print_res(self, listgenpkt):
         output_str = '{}\n'.format(self.scenarioname)
-        total_delay = 0
+        total_delay = datetime.timedelta(seconds=0)
         total_succnum = 0
         total_pkt_hold = 0
         for i_id in range(len(self.listNodeBuffer)):
@@ -109,14 +110,14 @@ class DTNScenario_Prophet(object):
         return output_str, res, config
 
 class RoutingProphet(object):
-    def __init__(self, node_id, num_of_nodes, p_init=0.75, gamma=0.98, beta=0.25):
+    def __init__(self, node_id, num_of_nodes, min_time, p_init=0.75, gamma=0.98, beta=0.25):
         self.node_id = node_id
         self.P_init = p_init
         self.Gamma = gamma
         self.Beta = beta
         self.num_of_nodes = num_of_nodes
         # aging的时间, 多少秒更新一次 30s, 现在是0.1s一个间隔
-        self.secondsInTimeUnit = 30 * 10
+        self.secondsInTimeUnit = datetime.timedelta(seconds=60)
         # 记录 a_id 与其他任何节点 之间的delivery prob, P_a_any
         self.delivery_prob = np.zeros(self.num_of_nodes, dtype='double')
         # 初始化 为 P_init
@@ -124,7 +125,7 @@ class RoutingProphet(object):
             if i != self.node_id:
                 self.delivery_prob[i] = self.P_init
         # 记录 两两之间的上次相遇时刻 以便计算相遇间隔
-        self.lastAgeUpdate = 0
+        self.lastAgeUpdate = min_time
 
     # ===============================================  Prophet内部逻辑  ================================
     # 每隔一段时间执行 老化效应

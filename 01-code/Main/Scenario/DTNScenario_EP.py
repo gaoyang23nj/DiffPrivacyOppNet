@@ -90,6 +90,7 @@ class DTNScenario_EP(object):
         else:
             avg_delay = ()
             output_str += 'succ_ratio:{} avg_delay:null\n'.format(succ_ratio)
+        output_str += 'num_comm:{}\n'.format(self.num_comm)
         output_str += 'total_hold:{} total_gen:{}, total_succ:{}\n'.format(total_pkt_hold, len(listgenpkt), total_succnum)
         print(output_str)
         res = {'succ_ratio': succ_ratio, 'avg_delay': avg_delay, 'num_comm': self.num_comm}

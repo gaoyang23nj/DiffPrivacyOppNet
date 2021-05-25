@@ -6,6 +6,7 @@ from Main.DTNPkt import DTNPktSandW
 
 import copy
 import math
+import datetime
 
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
 class DTNScenario_SandW(object):
@@ -13,6 +14,7 @@ class DTNScenario_SandW(object):
     def __init__(self, scenarioname, num_of_nodes, buffer_size):
         self.scenarioname = scenarioname
         self.inittoken = 8
+        self.num_comm = 0
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
         for node_id in range(num_of_nodes):
@@ -67,16 +69,18 @@ class DTNScenario_SandW(object):
             tmp_pkt.token = changed_token
             if tmp_pkt.dst_id == b_id:
                 isReach = self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
+                self.num_comm = self.num_comm + 1
                 assert(isReach)
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
             else:
                 if changed_token > 0:
                     self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
+                    self.num_comm = self.num_comm + 1
                     self.listNodeBuffer[a_id].decrease_token(runningtime, tmp_pkt.pkt_id, changed_token)
 
     def print_res(self, listgenpkt):
         output_str = '{}\n'.format(self.scenarioname)
-        total_delay = 0
+        total_delay = datetime.timedelta(seconds=0)
         total_succnum = 0
         total_pkt_hold = 0
         for i_id in range(len(self.listNodeBuffer)):
@@ -96,8 +100,9 @@ class DTNScenario_SandW(object):
         else:
             avg_delay = ()
             output_str += 'succ_ratio:{} avg_delay:null\n'.format(succ_ratio)
+        output_str += 'num_comm:{}\n'.format(self.num_comm)
         output_str += 'total_hold:{} total_gen:{}, total_succ:{}\n'.format(total_pkt_hold, len(listgenpkt), total_succnum)
         print(output_str)
-        res = (succ_ratio, avg_delay)
-        config = ()
+        res = {'succ_ratio': succ_ratio, 'avg_delay': avg_delay, 'num_comm': self.num_comm}
+        config = {'ratio_bk_nodes': 0, 'drop_prob': 1}
         return output_str, res, config

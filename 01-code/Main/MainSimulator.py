@@ -27,7 +27,7 @@ class Simulator(object):
         # self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
 
         self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
-        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/14 23:59:59', "%Y/%m/%d %H:%M:%S")
+        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/31 23:59:59', "%Y/%m/%d %H:%M:%S")
         print(self.MIN_RUNNING_TIMES)
         print(self.MAX_RUNNING_TIMES)
         # 每个间隔的时间长度 0.1s
@@ -95,9 +95,9 @@ class Simulator(object):
         tmp = self.MIN_RUNNING_TIMES
 
         while self.sim_TimeNow <= self.MAX_RUNNING_TIMES:
-            if tmp + datetime.timedelta(days=1) < self.sim_TimeNow:
-                tmp = self.sim_TimeNow
-                print(self.sim_TimeNow)
+            # if tmp + datetime.timedelta(days=1) < self.sim_TimeNow:
+            #     tmp = self.sim_TimeNow
+            #     print(self.sim_TimeNow)
             gen_time = self.MAX_RUNNING_TIMES
             enco_time = self.MAX_RUNNING_TIMES
             if len(self.list_gen_eve) == 0 and len(self.list_enco_hist) == 0:
@@ -110,12 +110,13 @@ class Simulator(object):
                 self.sim_TimeNow = gen_time
                 # 执行报文生成
                 # controller记录这个pkt
-                print(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3])
                 self.list_genpkt.append((self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 # 各scenario生成pkt, pkt大小为100k
-                print('GEN EVE: time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
+                # print('GEN EVE: time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1],
+                #                                                         self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 for key, value in self.scenaDict.items():
-                    value.gennewpkt(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3], self.sim_TimeNow, 500)
+                    value.gennewpkt(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3],
+                                    self.sim_TimeNow, 500)
                 # 删除这个生成事件 以便继续进行
                 self.list_gen_eve.pop(0)
             if gen_time >= enco_time:
@@ -144,10 +145,22 @@ class Simulator(object):
 
     def init_scenario_testProphet(self):
         index = -1
-        # ===============================场景1 Prophet ===================================
+        # ===============================场景1 EP ===================================
+        index += 1
+        tmp_senario_name = 'scenario' + str(index) + '_EP'
+        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000)
+        self.scenaDict.update({tmp_senario_name: tmpscenario})
+
+        # ===============================场景2 Prophet ===================================
         index += 1
         tmp_senario_name = 'scenario' + str(index) + '_Prophet'
-        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000)
+        tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, self.MIN_RUNNING_TIMES, 20000)
+        self.scenaDict.update({tmp_senario_name: tmpscenario})
+
+        # ===============================场景3 SandW ===================================
+        index += 1
+        tmp_senario_name = 'scenario' + str(index) + '_SandW'
+        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
         # ===============================场景单个单个的实验吧===================================
@@ -200,8 +213,8 @@ if __name__ == "__main__":
     result_file_path = "res_blackhole_" + short_time + ".csv"
 
     # genpkt_freqlist = [10 * 30, 10 * 60, 10 * 90, 10 * 120, 10 * 150]
-    # 6个hours
-    genpkt_freqlist = [60*60*6]
+    # 10个mins
+    genpkt_freqlist = [60*10]
     for i in range(5):
         for genpkt_freq in genpkt_freqlist:
             print(EncoHistDir, genpkt_freq)
