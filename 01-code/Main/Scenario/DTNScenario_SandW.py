@@ -31,7 +31,6 @@ class DTNScenario_SandW(object):
     # routing接到指令aid和bid相遇，开始进行消息交换a_id -> b_id
     def swappkt(self, runningtime, a_id, b_id):
         self.sendpkt(runningtime, a_id, b_id)
-        self.sendpkt(runningtime, b_id, a_id)
 
     # 报文发送 a_id -> b_id
     def sendpkt(self, runningtime, a_id, b_id):

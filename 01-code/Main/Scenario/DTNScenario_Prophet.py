@@ -1,3 +1,4 @@
+# 存在bug 更新方式
 from Main.DTNNodeBuffer import DTNNodeBuffer
 from Main.DTNPkt import DTNPkt
 
@@ -9,7 +10,7 @@ import datetime
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
 class DTNScenario_Prophet(object):
     # node_id的list routingname的list
-    def __init__(self, scenarioname, num_of_nodes, min_time, buffer_size):
+    def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time):
         self.scenarioname = scenarioname
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
@@ -31,16 +32,13 @@ class DTNScenario_Prophet(object):
     # routing接到指令aid和bid相遇，开始进行消息交换a_id -> b_id
     def swappkt(self, runningtime, a_id, b_id):
         # ================== 控制信息 交换==========================
-        # 对称操作!!!
+        # 单向操作!!!
         # 获取 b_node Router 向各节点的值(带有老化计算)
         P_b_any = self.listRouter[b_id].get_values_before_up(runningtime)
-        P_a_any = self.listRouter[a_id].get_values_before_up(runningtime)
         # 根据 b_node Router 保存的值, a_node更新向各其他node传递值 (带有a-b响应本次相遇的更新)
         self.listRouter[a_id].notifylinkup(runningtime, b_id, P_b_any)
-        self.listRouter[b_id].notifylinkup(runningtime, a_id, P_a_any)
         # ================== 报文 交换==========================
         self.sendpkt(runningtime, a_id, b_id)
-        self.sendpkt(runningtime, b_id, a_id)
 
     # 报文发送 a_id -> b_id
     def sendpkt(self, runningtime, a_id, b_id):

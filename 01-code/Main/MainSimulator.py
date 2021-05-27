@@ -6,6 +6,7 @@ import winsound
 import os
 
 from Main.Scenario.DTNScenario_EP import DTNScenario_EP
+from Main.Scenario.DTNScenario_RGMM import DTNScenario_RGMM
 from Main.Scenario.DTNScenario_SandW import DTNScenario_SandW
 from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
 
@@ -112,8 +113,8 @@ class Simulator(object):
                 # controller记录这个pkt
                 self.list_genpkt.append((self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 # 各scenario生成pkt, pkt大小为100k
-                # print('GEN EVE: time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1],
-                #                                                         self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
+                print('GEN EVE: time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1],
+                                                                        self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 for key, value in self.scenaDict.items():
                     value.gennewpkt(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3],
                                     self.sim_TimeNow, 500)
@@ -125,7 +126,6 @@ class Simulator(object):
                 tmp_enc = self.list_enco_hist[0]
                 for key, value in self.scenaDict.items():
                     value.swappkt(self.sim_TimeNow, tmp_enc[1], tmp_enc[2])
-                    # value.swappkt(self.sim_TimeNow, enc_eve[3], enc_eve[2])
                 self.list_enco_hist.pop(0)
         assert(len(self.list_gen_eve)==0 and len(self.list_enco_hist)==0)
 
@@ -138,10 +138,17 @@ class Simulator(object):
 
     def init_scenario(self):
         self.scenaDict = {}
-        # list_scena = self.init_scenario_testEric()
-        list_scena = self.init_scenario_testProphet()
-        # list_scena = self.init_scenario_testOur()
+        # list_scena = self.init_scenario_testProphet()
+        list_scena = self.init_scenario_testOur()
         return list_scena
+
+    def init_scenario_testOur(self):
+        index = -1
+        # ===============================场景1 EP ===================================
+        index += 1
+        tmp_senario_name = 'scenario' + str(index) + '_Our'
+        tmpscenario = DTNScenario_RGMM(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES)
+        self.scenaDict.update({tmp_senario_name: tmpscenario})
 
     def init_scenario_testProphet(self):
         index = -1
@@ -154,7 +161,7 @@ class Simulator(object):
         # ===============================场景2 Prophet ===================================
         index += 1
         tmp_senario_name = 'scenario' + str(index) + '_Prophet'
-        tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, self.MIN_RUNNING_TIMES, 20000)
+        tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
         # ===============================场景3 SandW ===================================
@@ -205,6 +212,12 @@ class Simulator(object):
 if __name__ == "__main__":
     t1 = datetime.datetime.now()
     print(datetime.datetime.now())
+    # 准备参数 如 station个数
+    station_info_obj = open(StationInfoPath, 'r', encoding="utf-8")
+    station_lines = station_info_obj.readlines()
+    num_station = len(station_lines)
+    station_info_obj.close()
+
 
     simdurationlist = []
 
@@ -219,7 +232,7 @@ if __name__ == "__main__":
         for genpkt_freq in genpkt_freqlist:
             print(EncoHistDir, genpkt_freq)
             t_start = datetime.datetime.now()
-            theSimulator = Simulator(216, EncoHistDir, genpkt_freq, result_file_path)
+            theSimulator = Simulator(num_station, EncoHistDir, genpkt_freq, result_file_path)
             t_end = datetime.datetime.now()
             print('running time:{}'.format(t_end - t_start))
             simdurationlist.append(t_end - t_start)
