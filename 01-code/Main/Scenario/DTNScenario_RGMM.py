@@ -83,6 +83,7 @@ class DTNScenario_RGMM(object):
         # 1) b_id 告诉 a_id: b_id有哪些pkt
         b_listpkt = self.listNodeBuffer[b_id].getlistpkt()
         a_listpkt = self.listNodeBuffer[a_id].getlistpkt()
+        isNeedtoRoutingDcs = False
         # hist列表 和 当前内存里都没有 来自a的pkt   a才有必要传输
         for a_pkt in a_listpkt:
             isDuplicateExist = False
@@ -101,7 +102,14 @@ class DTNScenario_RGMM(object):
                     totran_pktlist.insert(0, cppkt)
                 else:
                     totran_pktlist.append(cppkt)
+                    isNeedtoRoutingDcs = True
                 break
+        # 在ttl时间(从当前这天(包括当前这天)开始, 到ttl结束的当天(当天))内 从self.node_id到b_id的成功概率
+        # 获得概率密度 ttl以内 每个hour一个probdensity数值
+        if isNeedtoRoutingDcs:
+            ttl = datetime.timedelta(days=12)
+            res_b_cal = self.listRouter[b_id].getprobdensity(runningtime, ttl)
+            res_a_cal = self.listRouter[a_id].getprobdensity(runningtime, ttl)
         for tmp_pkt in totran_pktlist:
             # <是目的节点 OR P值更大> 才进行传输; 单播 只要传输就要删除原来的副本
             if tmp_pkt.dst_id == b_id:
@@ -109,8 +117,9 @@ class DTNScenario_RGMM(object):
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
                 self.num_comm = self.num_comm + 1
                 continue
-            P_b_dst = self.listRouter[b_id].get_values_before_up(runningtime, tmp_pkt.dst_id)
-            P_a_dst = self.listRouter[a_id].get_values_before_up(runningtime, tmp_pkt.dst_id)
+            assert isNeedtoRoutingDcs
+            P_b_dst, path_b = self.listRouter[b_id].get_values_before_up(runningtime, tmp_pkt.dst_id, res_b_cal)
+            P_a_dst, path_a = self.listRouter[a_id].get_values_before_up(runningtime, tmp_pkt.dst_id, res_a_cal)
             if P_a_dst < P_b_dst:
                 self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
@@ -302,7 +311,7 @@ class RoutingRGMM(object):
             res[index, :] = res[index, :] * res_list_betwday[index, :]
         return res
 
-    def __getprobdensity(self, runningtime, ttl):
+    def getprobdensity(self, runningtime, ttl):
         today_yday = runningtime.tm_yday
         # 收集day间数据
         res_list_betwday = []
@@ -389,15 +398,11 @@ class RoutingRGMM(object):
 
     # ========================= 提供给上层的功能 ======================================
     # 更新后, 提供 本node 的 delivery prob Matrix 给对端
-    def get_values_before_up(self, runningtime, pktdst_id):
+    def get_values_before_up(self, runningtime, pktdst_id, res_cal):
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
-        ttl = datetime.timedelta(days=12)
         # 1.精简graph, 从graph中提取path
         path_set = self.__getpath_fromgraph(pktdst_id)
-        # 获得概率密度 ttl以内 每个hour一个probdensity数值
-        res_cal = self.__getprobdensity(runningtime, ttl)
-        # 在ttl时间内 从self.node_id到b_id的成功概率
         # 2.按照节点顺序 卷积过去;  # *关键点获得？
         # 计算连续数天的概率密度, 从runningtime 到 runningtime+ttl
         max_value = 0.
@@ -407,8 +412,7 @@ class RoutingRGMM(object):
             if max_value < value:
                 max_index = index
                 max_value = value
-        # return max_value, path_set[max_index]
-        return max_value
+        return max_value, path_set[max_index]
 
     # 当a->b 相遇(linkup时候) 更新a->b相应的值
     def notifylinkup(self, runningtime, b_id, *args):
