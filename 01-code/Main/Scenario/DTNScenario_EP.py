@@ -57,7 +57,8 @@ class DTNScenario_EP(object):
                 cppkt = copy.deepcopy(a_pkt)
                 if a_pkt.dst_id == b_id:
                     totran_pktlist.insert(0, cppkt)
-                totran_pktlist.append(cppkt)
+                else:
+                    totran_pktlist.append(cppkt)
                 break
         # Epidemic的路由方法 都转发
         for tmp_pkt in totran_pktlist:

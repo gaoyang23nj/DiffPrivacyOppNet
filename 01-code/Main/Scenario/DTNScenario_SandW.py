@@ -59,7 +59,8 @@ class DTNScenario_SandW(object):
                 cppkt = copy.deepcopy(a_pkt)
                 if a_pkt.dst_id == b_id:
                     totran_pktlist.insert(0, cppkt)
-                totran_pktlist.append(cppkt)
+                else:
+                    totran_pktlist.append(cppkt)
                 break
         for tmp_pkt in totran_pktlist:
             # 若抵达的是目的节点(即b_id == tmp_pkt.dst_id) 则a_id删掉该pkt的副本

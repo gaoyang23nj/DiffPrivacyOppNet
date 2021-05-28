@@ -77,9 +77,8 @@ class DTNScenario_RGMM(object):
     def sendpkt(self, runningtime, a_id, b_id):
         # 准备从a到b传输的pkt 组成的list<这里保存的是deepcopy>
         totran_pktlist = []
-        # b_listpkt_hist = self.listNodeBuffer[b_id].getlistpkt_hist()
+        b_listpkt_hist = self.listNodeBuffer[b_id].getlistpkt_hist()
         # a_listpkt_hist = self.listNodeBuffer[a_id].getlistpkt_hist()
-        b_listpkt_hist = []
         a_listpkt_hist = []
         # 1) b_id 告诉 a_id: b_id有哪些pkt
         b_listpkt = self.listNodeBuffer[b_id].getlistpkt()
@@ -100,7 +99,8 @@ class DTNScenario_RGMM(object):
                 cppkt = copy.deepcopy(a_pkt)
                 if a_pkt.dst_id == b_id:
                     totran_pktlist.insert(0, cppkt)
-                totran_pktlist.append(cppkt)
+                else:
+                    totran_pktlist.append(cppkt)
                 break
         for tmp_pkt in totran_pktlist:
             # <是目的节点 OR P值更大> 才进行传输; 单播 只要传输就要删除原来的副本
@@ -159,7 +159,7 @@ class RoutingRGMM(object):
         self.alpha = 0.7
         self.GMM_Components=3
         self.MIN_SAMPLES = 15
-        self.MAX_HOPE = 10
+        self.MAX_HOPE = 5
         self.input_data_dir = EncoHistDir_SDPair
         # 记录不满足一天的记录
         self.tmp_list_record = []
@@ -171,7 +171,7 @@ class RoutingRGMM(object):
         self.P_holiday = []
         self.P_workday = []
         # 按照时间顺序 合并 P_holiday和P_workday
-        self.P_day_merge = np.ones((NUM_DAYS_INYEAR, self.num_of_nodes)) * -1
+        # self.P_day_merge = np.ones((NUM_DAYS_INYEAR, self.num_of_nodes)) * -1
 
         # 2.用于day内计算
         # 对各个目标节点b_id 都收集数据;
@@ -180,8 +180,8 @@ class RoutingRGMM(object):
         self.dataset_workday = []
         # (weights[n] means[n] vars[n]) * 节点个数; b_id; self.GMM_Components即n个高斯
         # self.list_paramsGMM_holiday[b_id] 表示针对节点b_id的(weights[n] means[n] vars[n])
-        self.list_paramsGMM_holiday = [-1] * self.num_of_nodes
-        self.list_paramsGMM_workday = [-1] * self.num_of_nodes
+        # self.list_paramsGMM_holiday = [-1] * self.num_of_nodes
+        # self.list_paramsGMM_workday = [-1] * self.num_of_nodes
         # 比较粗糙的粒度 每个小时一个数值
         self.probs_holiday = np.zeros((self.num_of_nodes, 24))
         self.probs_workday = np.zeros((self.num_of_nodes, 24))
@@ -219,7 +219,7 @@ class RoutingRGMM(object):
         # 为了防止跨几天的情况出现(下一次更新在好几天之后), 强制更新 list_num_trip和p_star
         self.list_num_trip[update_y_day-1, :] = tmplist_numtrip_oneday
         # 确保跨过几天也不会影响 矩阵全部更新
-        self.p_star = 1-np.exp(-self.list_num_trip)
+        self.p_star = 1.-np.exp(-self.list_num_trip)
         # holiday or not
         if self.list_weather[update_y_day-1][3]:
             if len(self.P_holiday) == 0:
@@ -236,15 +236,15 @@ class RoutingRGMM(object):
                                    + (1-self.alpha) * self.p_star[update_y_day-1, :]
                 self.P_workday.append((update_y_day-1, new_prob))
         # 更新self.P_day_merge; 此处可以优化一下流程先建立好 映射表(索引表)
-        for i in range(NUM_DAYS_INYEAR):
-            for tmp in self.P_holiday:
-                if tmp[0] == i:
-                    self.P_day_merge[i,:] = tmp[1]
-                    break
-            for tmp in self.P_workday:
-                if tmp[0] == i:
-                    self.P_day_merge[i,:] = tmp[1]
-                    break
+        # for i in range(NUM_DAYS_INYEAR):
+        #     for tmp in self.P_holiday:
+        #         if tmp[0] == i:
+        #             self.P_day_merge[i,:] = tmp[1]
+        #             break
+        #     for tmp in self.P_workday:
+        #         if tmp[0] == i:
+        #             self.P_day_merge[i,:] = tmp[1]
+        #             break
 
     # 2.day间, 执行GMM; 日内prob:GMM参数/概率串
     def process_dataset_withGMM(self):
@@ -263,8 +263,8 @@ class RoutingRGMM(object):
             else:
                 probs_w = np.zeros(24)
                 tunple_b_w = (np.zeros(3),np.zeros(3),np.zeros(3))
-            self.list_paramsGMM_holiday[b_id] = tunple_b_h
-            self.list_paramsGMM_workday[b_id] = tunple_b_w
+            # self.list_paramsGMM_holiday[b_id] = tunple_b_h
+            # self.list_paramsGMM_workday[b_id] = tunple_b_w
             self.probs_holiday[b_id, :] = probs_h
             self.probs_workday[b_id, :] = probs_w
 
@@ -302,7 +302,7 @@ class RoutingRGMM(object):
             res[index, :] = res[index, :] * res_list_betwday[index, :]
         return res
 
-    def getprobdensity(self, runningtime, ttl):
+    def __getprobdensity(self, runningtime, ttl):
         today_yday = runningtime.tm_yday
         # 收集day间数据
         res_list_betwday = []
@@ -393,11 +393,11 @@ class RoutingRGMM(object):
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
         ttl = datetime.timedelta(days=12)
-        # 获得概率密度 ttl以内 每个hour一个probdensity数值
-        res_cal = self.getprobdensity(runningtime, ttl)
-        # 在ttl时间内 从self.node_id到b_id的成功概率
         # 1.精简graph, 从graph中提取path
         path_set = self.__getpath_fromgraph(pktdst_id)
+        # 获得概率密度 ttl以内 每个hour一个probdensity数值
+        res_cal = self.__getprobdensity(runningtime, ttl)
+        # 在ttl时间内 从self.node_id到b_id的成功概率
         # 2.按照节点顺序 卷积过去;  # *关键点获得？
         # 计算连续数天的概率密度, 从runningtime 到 runningtime+ttl
         max_value = 0.

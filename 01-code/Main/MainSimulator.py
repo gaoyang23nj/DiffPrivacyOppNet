@@ -124,6 +124,7 @@ class Simulator(object):
                 self.sim_TimeNow = enco_time
                 # 执行相遇事件list
                 tmp_enc = self.list_enco_hist[0]
+                print('CONTACT: time:{} a:{} b:{}'.format(self.sim_TimeNow, tmp_enc[1], tmp_enc[2]))
                 for key, value in self.scenaDict.items():
                     value.swappkt(self.sim_TimeNow, tmp_enc[1], tmp_enc[2])
                 self.list_enco_hist.pop(0)
@@ -227,7 +228,7 @@ if __name__ == "__main__":
 
     # genpkt_freqlist = [10 * 30, 10 * 60, 10 * 90, 10 * 120, 10 * 150]
     # 10个mins
-    genpkt_freqlist = [60*10]
+    genpkt_freqlist = [60*60]
     for i in range(5):
         for genpkt_freq in genpkt_freqlist:
             print(EncoHistDir, genpkt_freq)
