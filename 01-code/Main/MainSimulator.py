@@ -21,13 +21,15 @@ class Simulator(object):
         # 汇总 实验结果
         self.result_file_path = result_file_path
 
+        self.max_ttl = datetime.timedelta(days=12)
         # 节点个数默认216个, id 0~215
         self.MAX_NODE_NUM = num_station
         # 最大运行时间 执行时间 36000*24个间隔, 即24hour; 应该根据 enco_hist 进行更新
         # self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
         # self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
 
-        self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
+        self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/6/1 0:0:00', "%Y/%m/%d %H:%M:%S")
+        self.BEGIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
         self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/31 23:59:59', "%Y/%m/%d %H:%M:%S")
         print(self.MIN_RUNNING_TIMES)
         print(self.MAX_RUNNING_TIMES)
@@ -82,12 +84,13 @@ class Simulator(object):
         file_object.close()
 
     def build_gen_event(self):
-        gen_time = self.MIN_RUNNING_TIMES
+        gen_time = self.BEGIN_RUNNING_TIMES
         while True:
             gen_time = gen_time + self.GENPKT_DELTA_TIME
             if gen_time > self.MAX_RUNNING_TIMES:
                 break
-            (src_index, dst_index) = self.__gen_pair_randint(self.MAX_NODE_NUM)
+            # (src_index, dst_index) = self.__gen_pair_randint(self.MAX_NODE_NUM)
+            (src_index, dst_index) = (3, 6)
             self.list_gen_eve.append((gen_time, self.pktid_nextgen, src_index, dst_index))
             self.pktid_nextgen = self.pktid_nextgen + 1
         print('num_gen_eve:', len(self.list_gen_eve))
@@ -96,9 +99,6 @@ class Simulator(object):
         tmp = self.MIN_RUNNING_TIMES
 
         while self.sim_TimeNow <= self.MAX_RUNNING_TIMES:
-            # if tmp + datetime.timedelta(days=1) < self.sim_TimeNow:
-            #     tmp = self.sim_TimeNow
-            #     print(self.sim_TimeNow)
             gen_time = self.MAX_RUNNING_TIMES
             enco_time = self.MAX_RUNNING_TIMES
             if len(self.list_gen_eve) == 0 and len(self.list_enco_hist) == 0:
@@ -109,6 +109,12 @@ class Simulator(object):
                 enco_time = self.list_enco_hist[0][0]
             if gen_time <= enco_time:
                 self.sim_TimeNow = gen_time
+                # 通知新的一天到了
+                if tmp + datetime.timedelta(days=1) <= self.sim_TimeNow:
+                    print('NOTIFY time:{}'.format(tmp))
+                    tmp = tmp + datetime.timedelta(days=1)
+                    for key, value in self.scenaDict.items():
+                        value.notify_new_day(self.sim_TimeNow)
                 # 执行报文生成
                 # controller记录这个pkt
                 self.list_genpkt.append((self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
@@ -122,9 +128,15 @@ class Simulator(object):
                 self.list_gen_eve.pop(0)
             if gen_time >= enco_time:
                 self.sim_TimeNow = enco_time
+                # 通知新的一天到了
+                if tmp + datetime.timedelta(days=1) <= self.sim_TimeNow:
+                    print('NOTIFY time:{}'.format(tmp))
+                    tmp = tmp + datetime.timedelta(days=1)
+                    for key, value in self.scenaDict.items():
+                        value.notify_new_day(self.sim_TimeNow)
                 # 执行相遇事件list
                 tmp_enc = self.list_enco_hist[0]
-                print('CONTACT: time:{} a:{} b:{}'.format(self.sim_TimeNow, tmp_enc[1], tmp_enc[2]))
+                # print('CONTACT: time:{} a:{} b:{}'.format(self.sim_TimeNow, tmp_enc[1], tmp_enc[2]))
                 for key, value in self.scenaDict.items():
                     value.swappkt(self.sim_TimeNow, tmp_enc[1], tmp_enc[2])
                 self.list_enco_hist.pop(0)
@@ -148,7 +160,7 @@ class Simulator(object):
         # ===============================场景1 EP ===================================
         index += 1
         tmp_senario_name = 'scenario' + str(index) + '_Our'
-        tmpscenario = DTNScenario_RGMM(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES)
+        tmpscenario = DTNScenario_RGMM(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
     def init_scenario_testProphet(self):

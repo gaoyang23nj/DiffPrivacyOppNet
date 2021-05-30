@@ -22,8 +22,12 @@ NUM_DAYS_INYEAR = 365
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
 class DTNScenario_RGMM(object):
     # node_id的list routingname的list
-    def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time):
+    def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time, max_ttl):
         self.scenarioname = scenarioname
+        # 最大max_ttl
+        self.max_ttl = max_ttl
+        # 节点个数
+        self.num_of_nodes = num_of_nodes
         # (tm,tmp_high,tmp_low,is_holiday)*365 每天的天气/休假状况
         self.list_weather = []
         self.readWeather()
@@ -31,7 +35,7 @@ class DTNScenario_RGMM(object):
         self.listNodeBuffer = []
         self.listRouter = []
         for node_id in range(num_of_nodes):
-            tmpRouter = RoutingRGMM(node_id, num_of_nodes, min_time, self.list_weather)
+            tmpRouter = RoutingRGMM(node_id, num_of_nodes, min_time, self.list_weather, self.max_ttl)
             self.listRouter.append(tmpRouter)
             tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size)
             self.listNodeBuffer.append(tmpBuffer)
@@ -61,6 +65,11 @@ class DTNScenario_RGMM(object):
         self.listNodeBuffer[src_id].gennewpkt(newpkt)
         return
 
+    # 通知每个节点更新自己的状态
+    def notify_new_day(self, runningtime):
+        for each_node_id in range(self.num_of_nodes):
+            self.listRouter[each_node_id].notify_new_day(runningtime)
+
     # routing接到指令aid和bid相遇，开始进行消息交换a_id -> b_id
     def swappkt(self, runningtime, a_id, b_id):
         # 控制信息 进行更新操作
@@ -75,6 +84,7 @@ class DTNScenario_RGMM(object):
 
     # 报文发送 a_id -> b_id
     def sendpkt(self, runningtime, a_id, b_id):
+        # print('{}->{}'.format(a_id, b_id))
         # 准备从a到b传输的pkt 组成的list<这里保存的是deepcopy>
         totran_pktlist = []
         b_listpkt_hist = self.listNodeBuffer[b_id].getlistpkt_hist()
@@ -106,10 +116,6 @@ class DTNScenario_RGMM(object):
                 break
         # 在ttl时间(从当前这天(包括当前这天)开始, 到ttl结束的当天(当天))内 从self.node_id到b_id的成功概率
         # 获得概率密度 ttl以内 每个hour一个probdensity数值
-        if isNeedtoRoutingDcs:
-            ttl = datetime.timedelta(days=12)
-            res_b_cal = self.listRouter[b_id].getprobdensity(runningtime, ttl)
-            res_a_cal = self.listRouter[a_id].getprobdensity(runningtime, ttl)
         for tmp_pkt in totran_pktlist:
             # <是目的节点 OR P值更大> 才进行传输; 单播 只要传输就要删除原来的副本
             if tmp_pkt.dst_id == b_id:
@@ -118,8 +124,9 @@ class DTNScenario_RGMM(object):
                 self.num_comm = self.num_comm + 1
                 continue
             assert isNeedtoRoutingDcs
-            P_b_dst, path_b = self.listRouter[b_id].get_values_before_up(runningtime, tmp_pkt.dst_id, res_b_cal)
-            P_a_dst, path_a = self.listRouter[a_id].get_values_before_up(runningtime, tmp_pkt.dst_id, res_a_cal)
+            P_b_dst, path_b = self.listRouter[b_id].get_values_before_up(runningtime, tmp_pkt.dst_id)
+            P_a_dst, path_a = self.listRouter[a_id].get_values_before_up(runningtime, tmp_pkt.dst_id)
+            print('pkt_{} ({}->{}):{}({}),{}({})'.format(tmp_pkt.pkt_id, tmp_pkt.src_id, tmp_pkt.dst_id, a_id, P_a_dst, b_id, P_b_dst))
             if P_a_dst < P_b_dst:
                 self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
@@ -156,18 +163,19 @@ class DTNScenario_RGMM(object):
 
 
 class RoutingRGMM(object):
-    def __init__(self, node_id, num_of_nodes, min_time, input_list_weather):
+    def __init__(self, node_id, num_of_nodes, min_time, input_list_weather, max_ttl):
         self.node_id = node_id
         self.num_of_nodes = num_of_nodes
         self.MIN_TIME = time.strptime(min_time.strftime('%Y/%m/%d %H:%M:%S'), "%Y/%m/%d %H:%M:%S")
         # 从datetime结构 转化为time结构
         self.lastAgeUpdate = self.MIN_TIME
         self.list_weather = input_list_weather
+        self.max_ttl = max_ttl
 
         self.Threshold_P = 0.2
         self.alpha = 0.7
         self.GMM_Components=3
-        self.MIN_SAMPLES = 15
+        self.MIN_SAMPLES = 8
         self.MAX_HOPE = 5
         self.input_data_dir = EncoHistDir_SDPair
         # 记录不满足一天的记录
@@ -208,8 +216,13 @@ class RoutingRGMM(object):
         # 更新时间
         self.all_UpdatingTime = [self.MIN_TIME] * self.num_of_nodes
 
+        # 用来计算概率
+        # 结果应该是 节点个数(216)*day内时间粒度(24hour)*day间(ttl.days+1)
+        self.all_res_cal = [np.zeros((self.num_of_nodes, (self.max_ttl.days+1)*24))] * self.num_of_nodes
+
+
     # 1.day间, 执行以前的方案; 新的时间已经是新的一天；更新缓冲区self.tmp_list_record
-    def process_record_betwday(self, update_y_day):
+    def __process_record_betwday(self, update_y_day):
         # 1.日间prob: (老方法)
         # 1.1 list_num_trip (365,num_nodes) 记录一年内 trip: src-dst 每天发生的次数;
         # list_num_trip[i] 记录本年(2017年)内第i天 trip:src-dst 发生的次数;
@@ -244,6 +257,11 @@ class RoutingRGMM(object):
                 new_prob = self.alpha * self.P_workday[-1][1] \
                                    + (1-self.alpha) * self.p_star[update_y_day-1, :]
                 self.P_workday.append((update_y_day-1, new_prob))
+        # 考虑第一天刚好是holiday; 如果更新了 就放到all_P_holiday; 否则还是用默认值
+        if len(self.P_holiday)>0:
+            self.all_P_holiday[self.node_id] = self.P_holiday[-1][1]
+        if len(self.P_workday)>0:
+            self.all_P_workday[self.node_id] = self.P_workday[-1][1]
         # 更新self.P_day_merge; 此处可以优化一下流程先建立好 映射表(索引表)
         # for i in range(NUM_DAYS_INYEAR):
         #     for tmp in self.P_holiday:
@@ -255,8 +273,8 @@ class RoutingRGMM(object):
         #             self.P_day_merge[i,:] = tmp[1]
         #             break
 
-    # 2.day间, 执行GMM; 日内prob:GMM参数/概率串
-    def process_dataset_withGMM(self):
+    # 2.day内, 执行GMM; 日内prob:GMM参数/概率串
+    def __process_dataset_withGMM(self):
         for b_id in range(self.num_of_nodes):
             if b_id == self.node_id:
                 continue
@@ -276,6 +294,37 @@ class RoutingRGMM(object):
             # self.list_paramsGMM_workday[b_id] = tunple_b_w
             self.probs_holiday[b_id, :] = probs_h
             self.probs_workday[b_id, :] = probs_w
+        self.all_probs_holiday[self.node_id] = self.probs_holiday
+        self.all_probs_workday[self.node_id] = self.probs_workday
+
+    # 刷新从self.node_id的视角来看 target_id到各个节点的评价
+    def __update_probdensity(self, runningtime):
+        tmp_res_cal = np.zeros((self.num_of_nodes, (self.max_ttl.days+1)*24))
+        today_yday = runningtime.tm_yday
+        # 收集day间数据
+        res_list_betwday = []
+        # 1.处理cond_prob
+        for i in range(self.max_ttl.days + 1):
+            index = today_yday + i - 1
+            if self.list_weather[index][3]:
+                # [np.array(各个节点), np.array, np.array, ... ] 一共 ttl个
+                res_list_betwday.append(self.all_P_holiday[self.node_id])
+            else:
+                res_list_betwday.append(self.all_P_workday[self.node_id])
+        res_list_betwday = np.array(res_list_betwday)
+        # ttl.days * num_nodes 第几天/发往哪个节点
+        cond_P = self.__cal_cond_prob(res_list_betwday)
+        # 2.计算final prob streaming
+        for i in range(self.max_ttl.days + 1):
+            index = today_yday + i - 1
+            if self.list_weather[index][3]:
+                # 216*24, 13*216 第j个小时
+                for j in range(i*24, (i+1)*24):
+                    tmp_res_cal[:, j] = self.all_probs_holiday[self.node_id][:, j - i * 24] * cond_P[i, :]
+            else:
+                for j in range(i*24, (i+1)*24):
+                    tmp_res_cal[:, j] = self.all_probs_workday[self.node_id][:, j - i * 24] * cond_P[i, :]
+        self.all_res_cal[self.node_id] = tmp_res_cal
 
     # 按照24小时计算概率
     def __precdit_GMM(self, dateset):
@@ -303,48 +352,14 @@ class RoutingRGMM(object):
 
     # 生成矩阵 ttl.days * num_nodes 每个位置表示 条件概率 a-b事件在这天发生
     def __cal_cond_prob(self, res_list_betwday):
+        # 多少天 * 多少个对端节点
         res = np.ones((res_list_betwday.shape[0], self.num_of_nodes))
         for index in range(0, res_list_betwday.shape[0]):
-            # 从0到index-1 行
+            # 从0到index-1 行；从最开始的一天(0) 到 这一天(index)
             for j in range(0, index):
                 res[index, :] = res[index, :] * (1. - res_list_betwday[j, :])
             res[index, :] = res[index, :] * res_list_betwday[index, :]
         return res
-
-    def getprobdensity(self, runningtime, ttl):
-        today_yday = runningtime.tm_yday
-        # 收集day间数据
-        res_list_betwday = []
-        # 1.处理cond_prob
-        for i in range(ttl.days + 1):
-            index = today_yday + i - 1
-            if self.list_weather[index][3]:
-                # [np.array(各个节点), np.array, np.array, ... ] 一共 ttl个
-                if len(self.P_holiday) > 0:
-                    res_list_betwday.append(self.P_holiday[-1][1])
-                else:
-                    res_list_betwday.append(np.zeros(self.num_of_nodes))
-            else:
-                if len(self.P_workday) > 0:
-                    res_list_betwday.append(self.P_workday[-1][1])
-                else:
-                    res_list_betwday.append(np.zeros(self.num_of_nodes))
-        res_list_betwday = np.array(res_list_betwday)
-        # ttl.days * num_nodes
-        cond_P = self.__cal_cond_prob(res_list_betwday)
-        # 2.计算final prob streaming
-        # 结果应该是 节点个数(216)*day内时间粒度(24hour)*day间(ttl.days+1)
-        res_cal = np.zeros((self.num_of_nodes, (ttl.days+1)*24))
-        for i in range(ttl.days + 1):
-            index = today_yday + i - 1
-            if self.list_weather[index][3]:
-                # 216*24, 13*216
-                for j in range(i*24, (i+1)*24):
-                    res_cal[:, j] = self.probs_holiday[:, j - i * 24] * cond_P[i, :]
-            else:
-                for j in range(i*24, (i+1)*24):
-                    res_cal[:, j] = self.probs_workday[:, j - i * 24] * cond_P[i, :]
-        return res_cal
 
     def __find_next_node(self, fwlist, pktdst_id, remain_hop):
         if remain_hop == 0:
@@ -359,7 +374,7 @@ class RoutingRGMM(object):
                 continue
             # holiday or not; 小于阈值 概率过低，link不成立
             if (self.all_P_workday[fwlist[-1]][tonode] < self.Threshold_P) \
-                    or (self.all_P_holiday[fwlist[-1]][tonode] < self.Threshold_P):
+                    and (self.all_P_holiday[fwlist[-1]][tonode] < self.Threshold_P):
                 continue
             if tonode == pktdst_id:
                 tmplist = fwlist.copy()
@@ -378,11 +393,16 @@ class RoutingRGMM(object):
         path_set = self.__find_next_node(fwlist_set, pktdst_id, self.MAX_HOPE)
         return path_set
 
-    def __cal_convolprob(self, runningtime, onepath, res_cal):
+    #
+    def __cal_convolprob(self, runningtime, onepath):
+        tmp_targetmatrix = np.zeros((len(onepath)-1, (self.max_ttl.days+1)*24))
+        for i in range(1, len(onepath)):
+            # onepath[i-1] -> onepath[i]
+            tmp_targetmatrix[i-1, :] = self.all_res_cal[onepath[i-1]][onepath[i], :]
         t = runningtime.tm_hour
-        targetmatrix = res_cal[onepath, t:]
+        targetmatrix = tmp_targetmatrix[:, t:]
         matrix_size = targetmatrix.shape
-        assert len(onepath) == matrix_size[0]
+        assert len(onepath)-1 == matrix_size[0]
         # 计算概率 的 sum次数
         num_sum = matrix_size[1]-len(onepath)+1
         sum_prob = 0.
@@ -397,22 +417,50 @@ class RoutingRGMM(object):
         return sum_prob
 
     # ========================= 提供给上层的功能 ======================================
-    # 更新后, 提供 本node 的 delivery prob Matrix 给对端
-    def get_values_before_up(self, runningtime, pktdst_id, res_cal):
+    def notify_new_day(self, runningtime):
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
+        # 1.day间处理；如果新的一天已经开始, 更新在每天的概率
+        assert self.lastAgeUpdate.tm_yday + 1 == runningtime.tm_yday
+
+        # 1. day间 更新处理;
+        self.__process_record_betwday(self.lastAgeUpdate.tm_yday)
+        # 2. day内 更新处理
+        self.__process_dataset_withGMM()
+        # 3. 更新矩阵 self.all_res_cal [num_station * (24*ttl)] num_nodes
+        self.__update_probdensity(runningtime)
+        # 已经满一天 清空buffer
+        self.tmp_list_record.clear()
+        # 更新处理时间
+        self.lastAgeUpdate = runningtime
+
+    # 更新后, 提供 本node 的 delivery prob Matrix 给对端
+    def get_values_before_up(self, runningtime, pktdst_id):
+        runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
+                                    "%Y/%m/%d %H:%M:%S")
+        # print('begin get path set')
+        # print(datetime.datetime.now())
         # 1.精简graph, 从graph中提取path
         path_set = self.__getpath_fromgraph(pktdst_id)
+        # print('end get path set ')
+        # print(datetime.datetime.now())
         # 2.按照节点顺序 卷积过去;  # *关键点获得？
         # 计算连续数天的概率密度, 从runningtime 到 runningtime+ttl
         max_value = 0.
         max_index = -1
+        # print('begin cal_convolprob')
+        # print(datetime.datetime.now())
         for index in range(len(path_set)):
-            value = self.__cal_convolprob(runningtime, path_set[index], res_cal)
+            value = self.__cal_convolprob(runningtime, path_set[index])
             if max_value < value:
                 max_index = index
                 max_value = value
-        return max_value, path_set[max_index]
+        res_path = []
+        if max_index != -1:
+            res_path = path_set[max_index]
+        # print('end cal_convolprob')
+        # print(datetime.datetime.now())
+        return max_value, res_path
 
     # 当a->b 相遇(linkup时候) 更新a->b相应的值
     def notifylinkup(self, runningtime, b_id, *args):
@@ -421,14 +469,7 @@ class RoutingRGMM(object):
         # b到任何节点的值
         # P_b_any = args[0]
         a_id = self.node_id
-        # 1.day间处理；如果新的一天已经开始, 更新在每天的概率
-        if self.lastAgeUpdate.tm_yday < runningtime.tm_yday:
-            # 1. day间 更新处理;
-            self.process_record_betwday(self.lastAgeUpdate.tm_yday)
-            # 2. day内 更新处理
-            self.process_dataset_withGMM()
-            # 已经满一天 清空buffer
-            self.tmp_list_record.clear()
+
         self.tmp_list_record.append((runningtime, a_id, b_id))
         # 2.day内处理; 整理GMM所需的数据集
         thm = runningtime.tm_hour + (runningtime.tm_min/60.0)
@@ -437,26 +478,20 @@ class RoutingRGMM(object):
             self.dataset_holiday[b_id].append(thm)
         else:
             self.dataset_workday[b_id].append(thm)
-        # 更新处理时间
-        self.lastAgeUpdate = runningtime
 
     # 控制信息发布
     def getInfo(self, runningtime):
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
         # 交换信息更新
-        if len(self.P_holiday) > 0 and len(self.P_workday) > 0 :
-            self.all_P_holiday[self.node_id] = self.P_holiday[-1][1]
-            self.all_P_workday[self.node_id] = self.P_workday[-1][1]
-        self.all_probs_holiday[self.node_id] = self.probs_holiday
-        self.all_probs_workday[self.node_id] = self.probs_workday
+        # 已经实现每日更新
         self.all_UpdatingTime[self.node_id] = runningtime
         return self.all_UpdatingTime, self.all_P_holiday, self.all_P_workday, \
-               self.all_probs_holiday, self.all_probs_workday
+               self.all_probs_holiday, self.all_probs_workday, self.all_res_cal
 
     def updateInfo(self, info_othernode):
         other_UpdatingTime, other_P_holiday, other_P_workday, \
-        other_probs_holiday, other_probs_workday = info_othernode
+        other_probs_holiday, other_probs_workday, other_res_cal = info_othernode
         for update_node in range(self.num_of_nodes):
             # 本节点不更新
             if update_node == self.node_id:
@@ -469,4 +504,5 @@ class RoutingRGMM(object):
             self.all_P_workday[update_node] = other_P_workday[update_node]
             self.all_probs_holiday[update_node] = other_probs_holiday[update_node]
             self.all_probs_workday[update_node] = other_probs_workday[update_node]
+            self.all_res_cal[update_node] = other_res_cal[update_node]
             self.all_UpdatingTime[update_node] = other_UpdatingTime[update_node]

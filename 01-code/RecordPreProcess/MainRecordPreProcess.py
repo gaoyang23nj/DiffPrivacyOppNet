@@ -9,7 +9,7 @@ import datetime
 
 NanjingBike_InputData = '../NanjingBikeDataset/2017RentReturnData'
 Station1Info = '../NanjingBikeDataset/Pukou.xlsx'
-Station2Info = '../NanjingBikeDataset/Qiaobei.xlsx'
+# Station2Info = '../NanjingBikeDataset/Qiaobei.xlsx'
 EncoHistDir = '../EncoHistData_NJBike/data.csv'
 EncoHistBadDir = '../EncoHistData_NJBike/data_bad.csv'
 StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
@@ -37,7 +37,7 @@ class RecordPreProcess(object):
         self.list_stationinfo_id = []
         self.count = 0
         self.read_station_info(Station1Info)
-        self.read_station_info(Station2Info)
+        # self.read_station_info(Station2Info)
 
         self.list_instation_id = []
         self.list_outstation_id = []
@@ -154,6 +154,8 @@ class ResolveSDpair(object):
     def __init__(self, num_station):
         self.input_data_dir = EncoHistDir
         self.output_data_dir = EncoHistDir_SDPair
+        # 清理 文件夹
+        self.clear_sd_dir()
         # 保存src-dst id
         self.list_sdpair_index = []
         # 保存src-dst record
@@ -175,6 +177,13 @@ class ResolveSDpair(object):
                 new_sdpair_file.write(line)
             new_sdpair_file.close()
 
+    # 清除SD文件夹
+    def clear_sd_dir(self):
+        for i in os.listdir(self.output_data_dir):
+            if i.split('.')[1] == 'csv':
+                filepath = os.path.join(self.output_data_dir, i)
+                os.remove(filepath)
+
     # 按照src-dest pair进行文件划分
     def divide_all_record_data(self):
         input_obj = open(self.input_data_dir, 'r', encoding="utf-8")
@@ -191,7 +200,7 @@ class ResolveSDpair(object):
         input_obj.close()
 
 
-
+# 两个文件按照时间顺序排列各个记录
 def seq_datacsv():
     list_seq_record = []
     output_obj = open(EncoHistDir, 'r', encoding="utf-8")
