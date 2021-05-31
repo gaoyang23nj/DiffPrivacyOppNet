@@ -1,3 +1,5 @@
+# 进行路由metric比较时候，记下来当前的数值;
+# 路径挖掘的时候, 先得到metric值,只有高于之前才继续进行
 from Main.DTNNodeBuffer import DTNNodeBuffer
 from Main.DTNPkt import DTNPkt
 
@@ -23,6 +25,7 @@ NUM_DAYS_INYEAR = 365
 class DTNScenario_RGMM(object):
     # node_id的list routingname的list
     def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time, max_ttl):
+        print('memo')
         self.scenarioname = scenarioname
         # 最大max_ttl
         self.max_ttl = max_ttl
@@ -125,11 +128,27 @@ class DTNScenario_RGMM(object):
                 self.num_comm = self.num_comm + 1
                 continue
             assert isNeedtoRoutingDcs
-            P_b_dst, path_b = self.listRouter[b_id].get_values_before_up(runningtime, a_id, tmp_pkt.dst_id)
-            P_a_dst, path_a = self.listRouter[a_id].get_values_before_up(runningtime, b_id, tmp_pkt.dst_id)
-            print('pkt_{} ({}->{}):{}({}),{}({})'.format(tmp_pkt.pkt_id, tmp_pkt.src_id, tmp_pkt.dst_id,
-                                                         a_id, P_a_dst, b_id, P_b_dst))
-            if P_a_dst < P_b_dst:
+            isNeedtoFwd = False
+            # 判断是否有必要从a转发给b
+            P_a_dst, path_a = self.listRouter[a_id].get_values_before_up(runningtime, tmp_pkt.dst_id)
+            # 若之前已经计算过 有path存在, 并且最优path经过b节点, 不必计算 直接转发即可；
+            # 否则 a 和 b 分别计算路径 并且评价出最优的那个;
+            # 如果刚好遇上最佳path上的节点直接转发，
+            if len(path_a) > 0 and path_a[1] == b_id:
+                isNeedtoFwd = True
+                print('pkt_{} ({}->{}):{}({}),{}(...) find as wish'.format(tmp_pkt.pkt_id, tmp_pkt.src_id,
+                                                                          tmp_pkt.dst_id, a_id, P_a_dst,
+                                                                           b_id))
+            else:
+                P_b_dst, path_b = self.listRouter[b_id].get_values_before_up(runningtime, tmp_pkt.dst_id)
+                print('pkt_{} ({}->{}):{}({}),{}({})'.format(tmp_pkt.pkt_id, tmp_pkt.src_id,
+                                                             tmp_pkt.dst_id, a_id, P_a_dst, b_id, P_b_dst))
+                print('path_a {}'.format(path_a))
+                print('path_b {}'.format(path_b))
+                if P_a_dst < P_b_dst:
+                    isNeedtoFwd = True
+            if isNeedtoFwd:
+                print('fwd pkt_{} from {} to {}'.format(tmp_pkt.pkt_id, a_id, b_id))
                 self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
                 self.num_comm = self.num_comm + 1
@@ -221,7 +240,8 @@ class RoutingRGMM(object):
         # 用来计算概率
         # 结果应该是 节点个数(216)*day内时间粒度(24hour)*day间(ttl.days+1)
         self.all_res_cal = [np.zeros((self.num_of_nodes, (self.max_ttl.days+1)*24))] * self.num_of_nodes
-
+        # 保存每天临时出现的metric (pktdst_id, value, pathset[index])
+        self.list_metric_memo = []
 
     # 1.day间, 执行以前的方案; 新的时间已经是新的一天；更新缓冲区self.tmp_list_record
     def __process_record_betwday(self, update_y_day):
@@ -366,7 +386,7 @@ class RoutingRGMM(object):
             res[index, :] = res[index, :] * res_list_betwday[index, :]
         return res
 
-    def __find_next_node(self, fwlist, pktdst_id, nby_nodeid, remain_hop):
+    def __find_next_node(self, fwlist, pktdst_id, remain_hop):
         if remain_hop == 0:
             if fwlist[-1] == pktdst_id:
                 return fwlist
@@ -378,8 +398,6 @@ class RoutingRGMM(object):
             if tonode in fwlist:
                 continue
             # 不借助当前评价中的的对手节点
-            if tonode == nby_nodeid:
-                continue
             # 每条路径不能太弱。holiday or not; 小于阈值 概率过低， link不成立; 从[fwlist[-1]]到[tonode]
             if (self.all_P_workday[fwlist[-1]][tonode] < self.Threshold_P) \
                     and (self.all_P_holiday[fwlist[-1]][tonode] < self.Threshold_P):
@@ -395,14 +413,14 @@ class RoutingRGMM(object):
             else:
                 tmplist = fwlist.copy()
                 tmplist.append(tonode)
-                candpath = self.__find_next_node(tmplist, pktdst_id, nby_nodeid, remain_hop-1)
+                candpath = self.__find_next_node(tmplist, pktdst_id, remain_hop-1)
                 if candpath != None:
                     candidatelist_set.extend(candpath)
         return candidatelist_set
 
-    def __getpath_fromgraph(self, nby_nodeid, pktdst_id):
+    def __getpath_fromgraph(self, pktdst_id):
         fwlist_set = [self.node_id]
-        path_set = self.__find_next_node(fwlist_set, pktdst_id, nby_nodeid, self.MAX_HOPE)
+        path_set = self.__find_next_node(fwlist_set, pktdst_id, self.MAX_HOPE)
         return path_set
 
     #
@@ -443,17 +461,23 @@ class RoutingRGMM(object):
         self.__update_probdensity(runningtime)
         # 已经满一天 清空buffer
         self.tmp_list_record.clear()
+        # 清空前一天的metric缓存
+        self.list_metric_memo.clear()
         # 更新处理时间
         self.lastAgeUpdate = runningtime
 
     # 从本节点出发 不经过nby_nodeid 从而到达pktdst_id的 各种路径所提供概率的最大值
-    def get_values_before_up(self, runningtime, nby_nodeid, pktdst_id):
+    def get_values_before_up(self, runningtime, pktdst_id):
+        # 查询一下 今天是否已经计算过了
+        for tunple in self.list_metric_memo:
+            if tunple[0] == pktdst_id:
+                return tunple[1], tunple[2]
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
         # print('begin get path set')
         # print(datetime.datetime.now())
         # 1.精简graph, 从graph中提取path
-        path_set = self.__getpath_fromgraph(nby_nodeid, pktdst_id)
+        path_set = self.__getpath_fromgraph(pktdst_id)
         print('node{} num_path_set:{}'.format(self.node_id, len(path_set)))
         # print('end get path set ')
         # print(datetime.datetime.now())
@@ -473,8 +497,13 @@ class RoutingRGMM(object):
         res_path = []
         if max_index != -1:
             res_path = path_set[max_index]
+            # 加速计算
+            self.list_metric_memo.append((pktdst_id, max_value, res_path))
+        else:
+            self.list_metric_memo.append((pktdst_id, 0., []))
         # print('end cal_convolprob')
         # print(datetime.datetime.now())
+        # pkt_dst_id a-b a(-b)
         return max_value, res_path
 
     # 当a->b 相遇(linkup时候) 更新a->b相应的值

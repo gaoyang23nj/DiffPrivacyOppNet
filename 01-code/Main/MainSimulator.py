@@ -6,7 +6,7 @@ import winsound
 import os
 
 from Main.Scenario.DTNScenario_EP import DTNScenario_EP
-from Main.Scenario.DTNScenario_RGMM import DTNScenario_RGMM
+from Main.Scenario.DTNScenario_RGMM_memo import DTNScenario_RGMM
 from Main.Scenario.DTNScenario_SandW import DTNScenario_SandW
 from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
 
@@ -30,7 +30,7 @@ class Simulator(object):
 
         self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/6/1 0:0:00', "%Y/%m/%d %H:%M:%S")
         self.BEGIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
-        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/31 23:59:59', "%Y/%m/%d %H:%M:%S")
+        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/14 23:59:59', "%Y/%m/%d %H:%M:%S")
         print(self.MIN_RUNNING_TIMES)
         print(self.MAX_RUNNING_TIMES)
         # 每个间隔的时间长度 0.1s
@@ -89,8 +89,9 @@ class Simulator(object):
             gen_time = gen_time + self.GENPKT_DELTA_TIME
             if gen_time > self.MAX_RUNNING_TIMES:
                 break
-            # (src_index, dst_index) = self.__gen_pair_randint(self.MAX_NODE_NUM)
-            (src_index, dst_index) = (3, 6)
+            (src_index, dst_index) = self.__gen_pair_randint(self.MAX_NODE_NUM)
+            # 3-86-6
+            # (src_index, dst_index) = (3, 6)
             self.list_gen_eve.append((gen_time, self.pktid_nextgen, src_index, dst_index))
             self.pktid_nextgen = self.pktid_nextgen + 1
         print('num_gen_eve:', len(self.list_gen_eve))
@@ -241,7 +242,8 @@ if __name__ == "__main__":
     # genpkt_freqlist = [10 * 30, 10 * 60, 10 * 90, 10 * 120, 10 * 150]
     # 10个mins
     genpkt_freqlist = [60*60]
-    for i in range(5):
+    num_run = 5
+    for i in range(num_run):
         for genpkt_freq in genpkt_freqlist:
             print(EncoHistDir, genpkt_freq)
             t_start = datetime.datetime.now()
