@@ -1,0 +1,19 @@
+genfreq:1:00:00 RunningTime_Min_Max:2017-06-01 00:00:00;2017-07-14 23:59:59 gen_num:335 nr_nodes:216
+ scenario0_Our
+succ_ratio:0.44477611940298506 avg_delay:2 days, 17:12:25.926174 num_comm:1199
+total_hold:186 total_gen:335, total_succ:149
+
+scenario1_EP
+succ_ratio:0.0955223880597015 avg_delay:3 days, 21:16:36.875000
+num_comm:13180
+total_hold:303 total_gen:335, total_succ:32
+
+scenario2_Prophet
+succ_ratio:0.12238805970149254 avg_delay:2 days, 2:02:01.097561 num_comm:2133
+total_hold:152 total_gen:335, total_succ:41
+
+scenario3_SandW
+succ_ratio:0.050746268656716415 avg_delay:1 day, 23:50:19.058824
+num_comm:820
+total_hold:1067 total_gen:335, total_succ:17
+

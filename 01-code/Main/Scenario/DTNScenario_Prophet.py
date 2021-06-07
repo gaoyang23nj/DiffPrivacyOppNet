@@ -29,6 +29,10 @@ class DTNScenario_Prophet(object):
         self.listNodeBuffer[src_id].gennewpkt(newpkt)
         return
 
+    # 通知每个节点更新自己的状态
+    def notify_new_day(self, runningtime):
+        pass
+
     # routing接到指令aid和bid相遇，开始进行消息交换a_id -> b_id
     def swappkt(self, runningtime, a_id, b_id):
         # ================== 控制信息 交换==========================

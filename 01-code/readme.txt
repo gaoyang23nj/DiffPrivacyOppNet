@@ -26,3 +26,17 @@ __update_probdensity()
 5.ttl 应该全面使用
 
 6*** path挖掘方案 还需要修改 执行速度太慢了
+
+2021-06-07
+1st success: daily update; limited hop; warm up
+need to do:
+1.加速方案: daily prob计算的结果进行预选择, 之后再使用我们的方法2层prob计算方法
+
+2.高级方案：ttl 随机设置[2day ~ 13day], 突出优势
+
+3.隐私方案：扰动 每日的概率模式
+
+4.write
+
+
+
