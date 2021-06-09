@@ -1,2 +1,70 @@
-\section{System model}
+\section{Two-Tier Probability Model}
 \label{sec:sysmodel}
+We assume a set of nodes $\mathcal{N}$ in the network.
+In this paper, we mainly consider the message forwarding occurs by the bike trip among the bike stations.
+Thus the bike trip from node (station) $i$ to node (station) $j$ 
+can provide the message forwarding opportunity from $i$ to $j$,
+but can not serve the message forwarding from $j$ to $i$.
+The bike trip can also be treated as the directional contact,
+which is denoted by $i \rightarrow j$.
+
+\subsection{Inter-day probability}
+we assume that the contact events among the nodes are daily periodic
+and follow the Poisson process.
+Fig. 1** shows that the number of contacts in the range of year.
+We can find the contacts are regular among the successive days
+and vary slowly in the range of year.
+Let $\bar{C}_{i j}$ denote the expected number of contacts from $i$ to $j$ in one day.
+The probability that $i \rightarrow j$ occurs in a future day (after $k$th day) can be calculated as
+\begin{small}
+\begin{equation}
+\begin{aligned}
+p^{k}_{i j} = 1 - Prob\{\bar{C}_{i j}=0\} = 1 - exp(-C^{k}_{i j}),
+\end{aligned}
+\end{equation}
+\end{small}
+where the number of contact records in each day, e.g., $C^{k}_{i j}$ in $k$th day,
+will be collected in the end of each day.
+
+Since the inter-day pattern may vary caused by 
+temperature, holiday/workday, weather and air pollution, in the range of year,
+the inter-day probability of the contact occurrence, e.g., $P^{k+1}_{i j}$ in $k+1$th day,
+should be updated according to the contact records in each day.
+In this paper, we use the EWEA method (Exponentially Weighted Moving Average) to
+model the probability that at least a contact $i \rightarrow j$ can occurs in $k+1$th day,
+which is
+\begin{small}
+\begin{equation}
+P^{k+1}_{i j} =
+\left\{
+\begin{aligned}
+& p^{k}_{i j}, &\text{if  } k = 0 \\
+& \alpha P^{k}_{i j} + (1-\alpha) p^{k}_{i j}, &\text{if  } k \le 1
+\end{aligned}
+\right.
+\end{equation}
+\end{small}
+Here the weight coefficient $\alpha \in (0, 1)$.
+
+Additionally, the inter-day probability patterns are different between the holidays and the workdays.
+If $k$th day is the holiday, including weekends, May 1st (Labour Day), Mid-autumn Festival,  
+$C^{k}_{i j}$ should be utilized to calculate $Pw^{k+1}_{i j}$;
+otherwise $Ph^{k+1}_{i j}$.
+With this method, we can calculate the probability that the contact $i \rightarrow j$ can occur 
+at the beginning of each day with the contact history dataset.
+
+\subsection{Intra-day probability}
+As Fig.2** shows,
+we find that the contact probability patterns in the range of day
+are not same for any two node pair.
+The contact history from the residence to the metro station 
+show the apparent peak phenomenon,
+which means that the most of contacts occur in the morning rush hour, i.e. $7$ a.m. to $9$ a.m..
+But the contacts from the metro station to the residence
+mainly focus in the afternoon peak hours.
+Some contacts in the rural areas will not show the apparent difference between the peak and the valley.
+In order to model the intra-day probability pattern,
+we fit the gaussian mixture model for each pair $(i, j)$.
+
+After the trip collection in each day, the trip time will be collected.
+Similar with the inter-day probability,
