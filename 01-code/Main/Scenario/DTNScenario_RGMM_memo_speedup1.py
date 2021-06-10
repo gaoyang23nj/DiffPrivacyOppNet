@@ -22,7 +22,7 @@ WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 NUM_DAYS_INYEAR = 365
 
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
-class DTNScenario_RGMM(object):
+class DTNScenario_RGMM_Speedup(object):
     # node_id的list routingname的list
     def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time, max_ttl):
         print('memo')
@@ -38,7 +38,7 @@ class DTNScenario_RGMM(object):
         self.listNodeBuffer = []
         self.listRouter = []
         for node_id in range(num_of_nodes):
-            tmpRouter = RoutingRGMM(node_id, num_of_nodes, min_time, self.list_weather, self.max_ttl)
+            tmpRouter = RoutingRGMM_Speedup(node_id, num_of_nodes, min_time, self.list_weather, self.max_ttl)
             self.listRouter.append(tmpRouter)
             tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size)
             self.listNodeBuffer.append(tmpBuffer)
@@ -183,7 +183,7 @@ class DTNScenario_RGMM(object):
         return output_str, res, config
 
 
-class RoutingRGMM(object):
+class RoutingRGMM_Speedup(object):
     def __init__(self, node_id, num_of_nodes, min_time, input_list_weather, max_ttl):
         self.node_id = node_id
         self.num_of_nodes = num_of_nodes
@@ -409,7 +409,8 @@ class RoutingRGMM(object):
             if tonode == pktdst_id:
                 tmplist = fwlist.copy()
                 tmplist.append(tonode)
-                candidatelist_set.append(tmplist)
+                value = self.__cal_pre_select(tmplist)
+                candidatelist_set.append((tmplist, value))
             else:
                 tmplist = fwlist.copy()
                 tmplist.append(tonode)
@@ -466,8 +467,26 @@ class RoutingRGMM(object):
         # 更新处理时间
         self.lastAgeUpdate = runningtime
 
+    # (0->1)/(0->1 + 1->2 + 2->3) * (1->2)/(1->2 + 2->3)
+    def __cal_pre_select(self, one_path):
+        f = 1.
+        index = len(one_path)-1
+        old_value = 1 - math.log(self.all_P_holiday[one_path[index-1]][one_path[index]])
+        # 乘子
+        f = f * self.all_P_holiday[one_path[index-1]][one_path[index]]
+        while True:
+            index = index - 1
+            if index-1 < 0:
+                break
+            new_value = 1 - math.log(self.all_P_holiday[one_path[index-1]][one_path[index]])
+            # 惩罚系数
+            f = f * new_value/(old_value+new_value)
+            # 乘子
+            f = f * self.all_P_holiday[one_path[index-1]][one_path[index]]
+            old_value = old_value + new_value
+        return f
+
     # 从本节点出发 不经过nby_nodeid 从而到达pktdst_id的 各种路径所提供概率的最大值
-    # 为了memo 不做nby_nodeid
     def get_values_before_up(self, runningtime, pktdst_id):
         # 查询一下 今天是否已经计算过了
         for tunple in self.list_metric_memo:
@@ -475,19 +494,34 @@ class RoutingRGMM(object):
                 return tunple[1], tunple[2]
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
-        cur_list = []
-        cur_id = self.node_id
-        for i in range(self.num_of_nodes):
-            # 到哪里
-            tmplist = [i, 0., [cur_id]]
-            cur_list.append(tmplist)
-        # 逐hop推进
-        for cur_hop in range(self.MAX_HOPE):
-
-
-
-
-
+        # print('begin get path set')
+        # print(datetime.datetime.now())
+        # 1.精简graph, 从graph中提取path
+        path_set = self.__getpath_fromgraph(pktdst_id)
+        print('node{} num_path_set:{}'.format(self.node_id, len(path_set)))
+        # print('end get path set ')
+        # print(datetime.datetime.now())
+        # 1.1 pre-select 按照预选择方案 从大到小
+        def takeSecond(elem):
+            return elem[1]
+        path_set.sort(key=takeSecond, reverse=True)
+        # 2.按照节点顺序 卷积过去;  # *关键点获得？
+        # 计算连续数天的概率密度, 从runningtime 到 runningtime+ttl
+        max_value = 0.
+        max_index = -1
+        # print('begin cal_convolprob')
+        # print(datetime.datetime.now())
+        num_compare = 20
+        if len(path_set) <= num_compare:
+            num_compare = len(path_set)
+        for index in range(num_compare):
+            value = self.__cal_convolprob(runningtime, path_set[index])
+            if self.node_id == 3 and value > 0.1:
+                print('node[{}], path[{}]:{}'.format(self.node_id, path_set[index], value))
+            if max_value < value:
+                max_index = index
+                max_value = value
+        res_path = []
         if max_index != -1:
             res_path = path_set[max_index]
             # 加速计算

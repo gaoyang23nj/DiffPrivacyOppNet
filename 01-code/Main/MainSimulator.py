@@ -9,6 +9,7 @@ from Main.Scenario.DTNScenario_EP import DTNScenario_EP
 from Main.Scenario.DTNScenario_RGMM_memo import DTNScenario_RGMM
 from Main.Scenario.DTNScenario_SandW import DTNScenario_SandW
 from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
+from Main.Scenario.DTNScenario_RGMM_memo_speedup1 import DTNScenario_RGMM_Speedup
 
 EncoHistDir = '../EncoHistData_NJBike/data.csv'
 StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
@@ -154,6 +155,7 @@ class Simulator(object):
         self.scenaDict = {}
         # list_scena = self.init_scenario_testProphet()
         list_scena = self.init_scenario_testOur()
+        # list_scena = self.init_scenario_testOur_Speedup()
         return list_scena
 
     def init_scenario_testOur(self):
@@ -186,29 +188,35 @@ class Simulator(object):
         list_scena = list(self.scenaDict.keys())
         return list_scena
 
-    def init_scenario_testProphet(self):
-        index = -1
-        # ===============================场景1 EP ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_EP'
-        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
+def init_scenario_testOur_Speedup(self):
+    index = -1
+    # ===============================场景1 RGMM ===================================
+    index += 1
+    tmp_senario_name = 'scenario' + str(index) + '_Our'
+    tmpscenario = DTNScenario_RGMM_Speedup(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl)
+    self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景2 Prophet ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_Prophet'
-        tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
+    # ===============================场景1 EP ===================================
+    index += 1
+    tmp_senario_name = 'scenario' + str(index) + '_EP'
+    tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000)
+    self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景3 SandW ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_SandW'
-        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
+    # ===============================场景2 Prophet ===================================
+    index += 1
+    tmp_senario_name = 'scenario' + str(index) + '_Prophet'
+    tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES)
+    self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景单个单个的实验吧===================================
-        list_scena = list(self.scenaDict.keys())
-        return list_scena
+    # ===============================场景3 SandW ===================================
+    index += 1
+    tmp_senario_name = 'scenario' + str(index) + '_SandW'
+    tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000)
+    self.scenaDict.update({tmp_senario_name: tmpscenario})
+
+    # ===============================场景单个单个的实验吧===================================
+    list_scena = list(self.scenaDict.keys())
+    return list_scena
 
     # 打印出结果
     def print_res(self, filename, ctstring):
