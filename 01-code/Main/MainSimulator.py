@@ -162,7 +162,9 @@ class Simulator(object):
         # ===============================场景1 RTPM ===================================
         index += 1
         tmp_senario_name = 'scenario' + str(index) + '_RTPMLap'
-        tmpscenario = DTNScenario_RTPMLap(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl)
+        lap_noise_scale = 0.1
+        tmpscenario = DTNScenario_RTPMLap(tmp_senario_name, self.MAX_NODE_NUM, 20000,
+                                          self.MIN_RUNNING_TIMES, self.max_ttl, lap_noise_scale)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
         # ===============================场景1 RTPMLap ===================================
