@@ -13,8 +13,8 @@ WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
 
-class RoutingRTPMLap(object):
-    def __init__(self, node_id, num_of_nodes, min_time, input_list_weather, max_ttl, lap_noise_scale):
+class RoutingRTPMSpdUp(object):
+    def __init__(self, node_id, num_of_nodes, min_time, input_list_weather, max_ttl):
         self.node_id = node_id
         self.num_of_nodes = num_of_nodes
         self.MIN_TIME = time.strptime(min_time.strftime('%Y/%m/%d %H:%M:%S'), "%Y/%m/%d %H:%M:%S")
@@ -23,8 +23,6 @@ class RoutingRTPMLap(object):
         self.list_weather = input_list_weather
         self.max_ttl = max_ttl
 
-        # laplace noise的scale参数, 应该作为输入参数
-        self.LapNoiseScale = lap_noise_scale
         self.Threshold_P = 0.2
         self.alpha = 0.7
         self.GMM_Components=3
@@ -59,7 +57,6 @@ class RoutingRTPMLap(object):
         # 比较粗糙的粒度 每个小时一个数值
         self.probs_holiday = np.zeros((self.num_of_nodes, 24))
         self.probs_workday = np.zeros((self.num_of_nodes, 24))
-
 
         # 3.用于各个节点之间的信息交换
         # 来自于不同节点的 self.probs_workday 和 self.probs_holiday
@@ -185,13 +182,6 @@ class RoutingRTPMLap(object):
         probs = np.exp(Z)
         sum_probs = probs.sum()
         score = clf.score(XX)
-        lap_noise = laplace.rvs(loc=0., scale=self.LapNoiseScale, size=24)
-        for i in range(24):
-            if lap_noise[i] < 0:
-                lap_noise[i] = 0.
-            if lap_noise[i] > 1:
-                lap_noise[i] = 1.
-        probs = probs + lap_noise
         # print(Z)
         # print(probs)
         # print(sum_probs)
@@ -219,6 +209,32 @@ class RoutingRTPMLap(object):
         return res
 
     #=========================  函数组件：图的搜索 ===========================
+    # (0->1)/(0->1 + 1->2 + 2->3) * (1->2)/(1->2 + 2->3)
+    def __cal_pre_select(self, one_path):
+        f = 1.
+        index = len(one_path)-1
+        # P值可能为0 避免错误
+        if self.all_P_holiday[one_path[index-1]][one_path[index]] < 0.000001:
+            f = 0.
+            return f
+        old_value = 1 - math.log(self.all_P_holiday[one_path[index-1]][one_path[index]])
+        # 乘子
+        f = f * self.all_P_holiday[one_path[index-1]][one_path[index]]
+        while True:
+            index = index - 1
+            if index-1 < 0:
+                break
+            if self.all_P_holiday[one_path[index-1]][one_path[index]] < 0.000001:
+                f = 0.
+                break
+            new_value = 1 - math.log(self.all_P_holiday[one_path[index-1]][one_path[index]])
+            # 惩罚系数
+            f = f * new_value/(old_value+new_value)
+            # 乘子
+            f = f * self.all_P_holiday[one_path[index-1]][one_path[index]]
+            old_value = old_value + new_value
+        return f
+
     def __find_next_node(self, fwlist, pktdst_id, remain_hop):
         if remain_hop == 0:
             if fwlist[-1] == pktdst_id:
@@ -242,7 +258,8 @@ class RoutingRTPMLap(object):
             if tonode == pktdst_id:
                 tmplist = fwlist.copy()
                 tmplist.append(tonode)
-                candidatelist_set.append(tmplist)
+                value = self.__cal_pre_select(tmplist)
+                candidatelist_set.append((tmplist, value))
             else:
                 tmplist = fwlist.copy()
                 tmplist.append(tonode)
@@ -312,15 +329,33 @@ class RoutingRTPMLap(object):
         print('node{} num_path_set:{}'.format(self.node_id, len(path_set)))
         # print('end get path set ')
         # print(datetime.datetime.now())
-        # 2.2 按照节点顺序 积分计算连续数天的概率密度和, 从runningtime 到 runningtime+ttl
+        # 2.2 preselect
+        num_compare = 20
+        pre_max_value = 0.
+        pre_max_pathindex = -1
+        # 有序表
+        tmplist = [(0., -1)]*num_compare
+        for tunple_index in range(len(path_set)):
+            (onepath, onevalue) = path_set[tunple_index]
+            insert_index = -1
+            for i in range(num_compare):
+                if tmplist[i][0] < onevalue:
+                    tmplist.insert(i, (onevalue, tunple_index))
+                    tmplist.pop()
+                    break
+        # 2.3 按照节点顺序 积分计算连续数天的概率密度和, 从runningtime 到 runningtime+ttl
         max_value = 0.
         max_index = -1
         # print('begin cal_convolprob')
         # print(datetime.datetime.now())
-        for index in range(len(path_set)):
-            value = self.__cal_convolprob(runningtime, path_set[index])
+        for index in range(num_compare):
+            if tmplist[index][1] == -1:
+                break
+            onepathindex = tmplist[index][1]
+            onepath = path_set[onepathindex][0]
+            value = self.__cal_convolprob(runningtime, onepath)
             if self.node_id == 3 and value > 0.1:
-                print('node[{}], path[{}]:{}'.format(self.node_id, path_set[index], value))
+                print('node[{}], path[{}]:{}'.format(self.node_id, onepath, value))
             if max_value < value:
                 max_index = index
                 max_value = value

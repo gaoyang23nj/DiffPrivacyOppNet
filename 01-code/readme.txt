@@ -39,4 +39,17 @@ need to do:
 4.write
 
 
+2021-06-11
+可能存在的问题
+1. Lap噪声可能<0, 从而使得到的p_{24}<0; 想个办法解决
+read 2013CCS
+2. RTPM方案SpeedUp版本是否有效? RTPMSpdUp 和 RTPM
+进行实验
+3. 从原理上考虑加速方案
+存不存在 权重加和的关系 从而更新起来
+4. notify linkup时候 形成一个vertex+edge的graph结构
 
+2021-06-23
+可能存在的问题
+1.2020NDSS Lap以后一致性问题, sum=1, >=0
+2.RTPMSpdUp有效！
