@@ -2,7 +2,7 @@
 \label{sec:sysmodel}
 We assume a set of nodes $\mathcal{N}$ in the network.
 In this paper, we mainly consider the message forwarding occurs by the bike trip among the bike stations.
-Thus the bike trip from node (station) $i$ to node (station) $j$ 
+Thus the bike trip from node (station) $i$ to node (station) $j$
 can provide the message forwarding opportunity from $i$ to $j$,
 but can not serve the message forwarding from $j$ to $i$.
 The bike trip can also be treated as the directional contact,
@@ -16,55 +16,95 @@ We can find the contacts are regular among the successive days
 and vary slowly in the range of year.
 Let $\bar{C}_{i j}$ denote the expected number of contacts from $i$ to $j$ in one day.
 The probability that $i \rightarrow j$ occurs in a future day (after $k$th day) can be calculated as
-\begin{small}
 \begin{equation}
-\begin{aligned}
-p^{k}_{i j} = 1 - Prob\{\bar{C}_{i j}=0\} = 1 - exp(-C^{k}_{i j}),
-\end{aligned}
+\label{eq:rho}
+\rho^{k}_{i j} = 1 - Prob\{\bar{C}_{i j}=0\} = 1 - exp(-C^{k}_{i j}),
 \end{equation}
-\end{small}
 where the number of contact records in each day, e.g., $C^{k}_{i j}$ in $k$th day,
 will be collected in the end of each day.
 
-Since the inter-day pattern may vary caused by 
+Since the inter-day pattern may vary caused by
 temperature, holiday/workday, weather and air pollution, in the range of year,
 the inter-day probability of the contact occurrence, e.g., $P^{k+1}_{i j}$ in $k+1$th day,
 should be updated according to the contact records in each day.
 In this paper, we use the EWEA method (Exponentially Weighted Moving Average) to
 model the probability that at least a contact $i \rightarrow j$ can occurs in $k+1$th day,
 which is
-\begin{small}
 \begin{equation}
 P^{k+1}_{i j} =
 \left\{
 \begin{aligned}
-& p^{k}_{i j}, &\text{if  } k = 0 \\
-& \alpha P^{k}_{i j} + (1-\alpha) p^{k}_{i j}, &\text{if  } k \le 1
+& \rho^{k}_{i j}, &\text{if  } k = 0 \\
+& \alpha P^{k}_{i j} + (1-\alpha) \rho^{k}_{i j}, &\text{if  } k \le 1
 \end{aligned}
 \right.
 \end{equation}
-\end{small}
 Here the weight coefficient $\alpha \in (0, 1)$.
+$\rho^{k}_{i j}$ can be calculated according to (\ref{eq:rho}).
 
 Additionally, the inter-day probability patterns are different between the holidays and the workdays.
-If $k$th day is the holiday, including weekends, May 1st (Labour Day), Mid-autumn Festival,  
-$C^{k}_{i j}$ should be utilized to calculate $Pw^{k+1}_{i j}$;
-otherwise $Ph^{k+1}_{i j}$.
-With this method, we can calculate the probability that the contact $i \rightarrow j$ can occur 
+If $k$th day is the holiday, including weekends, May 1st (Labour Day), Mid-autumn Festival,
+$C^{k}_{i j}$ should be utilized to calculate $P^{k+1}_{i j}[w]$;
+otherwise $P^{k+1}_{i j}[h]$.
+With this method, we can calculate the probability that the contact $i \rightarrow j$ can occur
 at the beginning of each day with the contact history dataset.
 
 \subsection{Intra-day probability}
 As Fig.2** shows,
 we find that the contact probability patterns in the range of day
 are not same for any two node pair.
-The contact history from the residence to the metro station 
+The contact history from the residence to the metro station
 show the apparent peak phenomenon,
 which means that the most of contacts occur in the morning rush hour, i.e. $7$ a.m. to $9$ a.m..
 But the contacts from the metro station to the residence
 mainly focus in the afternoon peak hours.
 Some contacts in the rural areas will not show the apparent difference between the peak and the valley.
-In order to model the intra-day probability pattern,
-we fit the gaussian mixture model for each pair $(i, j)$.
+Then we use the probability density function to depict the intra-day probability pattern.
 
-After the trip collection in each day, the trip time will be collected.
-Similar with the inter-day probability,
+The gaussian mixture model, as a valid methods of probability density function,
+is utilized to predict the detailed contact time for each contact pair $(i, j)$.
+The input data is the time of each contact $i \rightarrow j$, i.e., $t_{i}.hour+t_{i}.min/60.0$,
+where $1 \le i \le C_{ij}$.
+Note that $t_{i}$ is the $i$th contact from node $i$ to node $j$.
+$C_{ij}$ is the total number of the contacts from the first day to the $k$th day.
+We adopt the expected maximization algorithm in the gaussian mixture model,
+whose details will not presented in this paper.
+Then we can get the probability density function for each time $x$, which is
+\begin{equation}
+\label{eq:prob_GMM}
+p_{i j}(x | \pi, \mu, \Sigma) = \sum_{k=1}^{K} \pi_{k} \mathcal{N}(x|\mu_{k}, \Sigma_{k}).
+\end{equation}
+where $\mathcal{N}(x|\mu_{k}, \Sigma_{k})$ is the gaussian distribution function 
+with mean $\mu_{k}$ and variance $\Sigma_{k}$.
+
+In order to simplify the computation,
+we calculate $\{p_{i j}(x)\}$, $x \in \mathcal{N} \text{ and } 1 \le x \le 24$
+to represent the probability that the contact occurs in the $x$th hour.
+Similarly with the inter-day probability, 
+the intra-day probability density also consists of the holiday pattern
+and the workday pattern, i.e., $p_{i j}[w]$ and $p_{i j}[h]$.
+
+\subsection{Probability Sequence for the Future Contacts}
+% Integrated Probability Sequence
+Based on the above two-tire probability model,
+we the probability sequence of future contacts.
+For example, the probability sequence of $i \rightarrow j$, which covers from $k$th day to $k+3$th day,
+is denoted by $(q^{k}_{1}, q^{k}_{2}, \cdots, q^{k}_{24}, q^{k+1}_{1}, \cdots, q^{k+1}_{24}, \cdots, q^{k+3}_{24})$.
+Here $q^{k+1}_{9}$ denotes the probability that
+the message is transmitted from $i$ to $j$ at between $8$ $a.m.$ and $9$ $a.m.$ of $k+1$th day.
+If the message can be transmitted at the time corresponding to $q^{k}_{9}$,
+the contacts before this time should not occur.
+Thus the conditional probability that
+the contact occurs at $k+1$th day can be obtained by
+\begin{equation}
+\label{eq:P_Cond}
+P(k) = Prob\{\text{contact at $k+1$th day}\} = P^{k+1}_{ij}\prod_{\kappa=k_{0}}^{k} (1-P^{\kappa}_{ij})
+\end{equation}
+We need to query whether $i$th day is a holiday ($k \le i \le k+3$) from the public Internet.
+Let $P^{\kappa}_{ij} = P^{\kappa}_{ij}[h]$ if $\kappa$th day is the holiday.
+otherwise, $P^{\kappa}_{ij} = P^{\kappa}_{ij}[w]$.
+Then $q^{k+1}_{x} = P(k)p(x)$, where $p(x)$ is obtained from ($\ref{eq:prob_GMM}$).
+
+
+ 
+

@@ -1,7 +1,36 @@
 \section{introduction}
 \label{sec:introduction}
-Opportunistic routing provided the message forwarding scheme
-in various scenarios, including the wild-fields
+Opportunistic Networks (OppNets) have emerged to provide the infrastructure-less scenarios, 
+such as underwater, UAV, rural areas, battle fields,
+%ref
+with the low-cost message dissemination service,
+and the supplement of the cellular network, including 5G.
+Due to the intermittent connectivity,
+OppNets rely on the {\it store-carry-forward} paradigm,
+where the forwarded messages will be stored in the intermediate node 
+until delivered to the destination or better relay nodes upon the contacts.
+
+In order to decide whether to forward or store the message when the contact occurs,
+a lot of opportunistic routing algorithms have been proposed.
+%ref
+The static routing algorithms, including Epidemic, DirectRouting and S\&W, 
+treat all the intermediate node equally
+and do not make use of the relation among nodes. 
+Serval routing algorithms based on the social attributes
+exploited the similarity evaluation to selectively forward messages to the nodes,
+which is similar with the destination nodes.
+The contact history is the important metric to measure the probability 
+that the relay node can contact the destination node.
+Moreover, the location and the link state 
+is also the auxiliary information of the routing decision.
+
+In many existing works on opportunistic routing,
+the contacts between nodes are assumed as conforming to the Poisson process assumption.
+
+which can be improved with the accurate probability 
+
+
+In this paper, we focus on the opportunistic routing in the pattern scenario, i.e., the bike sharing system.
 
 The main contributions are as follows.
 \begin{itemize}
@@ -13,7 +42,7 @@ the intra-day probability pattern based on gaussian mixture model
 to measure the probability of sequential events.
 Multiple potential routes of message forwarding
 are utilized to support the routing decision.}
-\item {we exploit the local differential privacy 
+\item {we exploit the local differential privacy
 to obscure the pattern of contact events.}
 \item {we evaluate the proposed scheme with the benchmarks,
 such as S\&W, Epidemic, Prophet,
@@ -21,3 +50,6 @@ in terms of the routing performance under various settings
 with the bike sharing trace.}
 \end{itemize}
 
+The rest of this paper is as follows.
+Section~\ref{sec:relatedwork} reviews the literatures about OppNets.
+Section 

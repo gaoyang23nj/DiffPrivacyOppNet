@@ -1,0 +1,32 @@
+\section{Method}
+\label{sec:method}
+\subsection{Delivery Metric based on Probability Model and Lifetime}
+
+\subsection{Probability Model Updating Mechanism}
+
+\subsection{Differential Privacy Preserving of Pattern}
+The differential privacy, as a provably privacy preserving method,
+is employed to obscure the intra-day probability pattern of contacts.
+Take $i \rightarrow j$ as an example,
+${p(x)}_{1 \le x \le 24}$ will represent the contact pattern.
+The sensitivity can be calculated as
+\begin{equation}
+\nonumber
+\Delta f = max_{\{p_{1}(x)\},\{p_{2}(x)\}} \sum_{x=1}^{24} || p_{1}(x) - p_{2}(x) ||_{1} = 2.
+\end{equation}
+For example, ....
+
+The published probability density $\{p^{\prime}(x)\}_{1 \le x \le 24}$ is obscured
+according to $p^{\prime}(x) = p(x) + Lap(\frac{\Delta f}{\varepsilon})$.
+$\varepsilon$ is the specified privacy parameter to control the magnitude of privacy preserving.
+
+\subsection{Differential Privacy Preserving of Pattern, Method 2}
+super-sphere, around $\{p\}^{24}$ add Laplace Noise
+
+a line $p_0 + p_1 = 1$, around $(p_0, p_1)$
+
+a sphere $p_0 + p_1 + p_2 = 1$, around $(p_0, p_1, p_2)$
+
+a super-sphere $p_0 + p_1 + p_2 + p_3 = 1$, around $(p_0, p_1, p_2, p_3)$
+\subsection{Algorithm}
+
