@@ -1,0 +1,5 @@
+genfreq:1:00:00 RunningTime_Min_Max:2017-06-01 00:00:00;2017-07-14 23:59:59 gen_num:335 nr_nodes:117
+ scenario0_Our
+succ_ratio:0.37910447761194027 avg_delay:1 day, 18:52:50.559055 num_comm:577
+total_hold:208 total_gen:335, total_succ:127
+
