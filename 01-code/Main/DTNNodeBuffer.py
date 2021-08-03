@@ -4,11 +4,12 @@ from Main.DTNPkt import *
 
 class DTNNodeBuffer(object):
     # buffersize = 10*1000 k, 即10M; 每个报文100k
-    def __init__(self, thescenario, node_id, maxsize):
+    def __init__(self, thescenario, node_id, maxsize, max_ttl):
         # 关联自己的场景
         self.theScenario = thescenario
         self.node_id = node_id
         self.maxsize = maxsize
+        self.max_ttl = max_ttl
         self.occupied_size = 0
         # <内存> 实时存储的pkt list, 从前往后（从0开始）pkt越来越老
         self.listofpkt = []
@@ -18,12 +19,14 @@ class DTNNodeBuffer(object):
         self.listofsuccpkt = []
 
     # =========================== 核心接口 提供传输pkt的名录; 生成报文; 接收报文
-    def gennewpkt(self, newpkt):
+    def gennewpkt(self, runningtime, newpkt):
+        self.__popoldpkt(runningtime)
         self.listofpktid_hist.append(newpkt.pkt_id)
         isDelPkt_for_room = self.__mkroomaddpkt(newpkt, isgen=True)
         return isDelPkt_for_room
 
     def receivepkt(self, runningtime, receivedpkt):
+        self.__popoldpkt(runningtime)
         # isReach 为 True 表示pkt已经投递到dest, 源节点不必再保留
         isDelPkt_for_room = False
         isReach = False
@@ -78,17 +81,34 @@ class DTNNodeBuffer(object):
                 break
 
     # ==============================================================================================================
+    # 去掉已经过时的报文
+    def __popoldpkt(self, runningtime):
+        if len(self.listofpkt) > 0:
+            # print('【begin】pop old ...')
+            # self.printpktlist()
+            for pkt in self.listofpkt:
+                # 如果生成时间加上ttl大于当前时间 (message的lifespan已经耗尽)
+                if runningtime > pkt.gentime + self.max_ttl:
+                    print('delete pkt_id:{}'.format(pkt.pkt_id))
+                    self.listofpkt.remove(pkt)
+            # self.printpktlist()
+            # print('【end】pop old ...')
+
     # 保证内存空间足够 并把pkt放在内存里; isgen 是否是生成新pkt
     def __mkroomaddpkt(self, newpkt, isgen):
         isDel = False
         self.__addpkt(newpkt)
         # 如果需要删除pkt以提供内存空间 按照drop old原则
         while self.occupied_size > self.maxsize:
-            print('delete pkt! in node_{}'.format(self.node_id))
+            # print('delete pkt! in node_{}'.format(self.node_id))
             self.occupied_size = self.occupied_size - self.listofpkt[0].pkt_size
             self.listofpkt.pop(0)
             isDel = True
         return isDel
+
+    def printpktlist(self):
+        for pkt in self.listofpkt:
+            print('([{}]{}->{},{})'.format(pkt.pkt_id,pkt.src_id,pkt.dst_id,pkt.gentime))
 
     # 内存中增加pkt newpkt
     def __addpkt(self, newpkt):

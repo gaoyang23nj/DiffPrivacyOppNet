@@ -1,55 +1,91 @@
 \section{introduction}
 \label{sec:introduction}
-Opportunistic Networks (OppNets) have emerged to provide the infrastructure-less scenarios, 
-such as underwater, UAV, rural areas, battle fields,
-%ref
-with the low-cost message dissemination service,
-and the supplement of the cellular network, including 5G.
-Due to the intermittent connectivity,
-OppNets rely on the {\it store-carry-forward} paradigm,
-where the forwarded messages will be stored in the intermediate node 
-until delivered to the destination or better relay nodes upon the contacts.
+Opportunistic Network (OppNet) has been
+one of the most popular solutions to {\it the data dissemination in the infrastructure-less scenarios},
+including Unmanned Aerial Vehicles~\cite{uav20iecommg, fanet19iecommg},
+Underwater Acoustic Sensor~\cite{underwater21tvt, Acou18ieNetw, thrO20cn}, isolated/disaster areas~\cite{disaster20tsmcs, rural21wcmc},
+and {\it the supplement of the existing cellular networks},
+e.g., the data offloading~\cite{freshoffload20twc, offload21sensors},
+in the recent years.
+Due to the lack of permanent end-to-end data delivery routes,
+OppNets always rely on the {\it store-carry-forward} paradigm,
+where the forwarded messages will be stored in the intermediate nodes
+until be delivered to the destination or the better relay nodes upon next intermittent contacts.
 
-In order to decide whether to forward or store the message when the contact occurs,
-a lot of opportunistic routing algorithms have been proposed.
-%ref
-The static routing algorithms, including Epidemic, DirectRouting and S\&W, 
-treat all the intermediate node equally
-and do not make use of the relation among nodes. 
-Serval routing algorithms based on the social attributes
-exploited the similarity evaluation to selectively forward messages to the nodes,
-which is similar with the destination nodes.
-The contact history is the important metric to measure the probability 
-that the relay node can contact the destination node.
-Moreover, the location and the link state 
-is also the auxiliary information of the routing decision.
+To improve the efficiency of the message dissemination,
+the auxiliary information,
+such as the spatial-temporal features~\cite{losero20tmc}, the contact history/pattern~\cite{dataInten19infocom, sporadic20wcnc},
+the social attributes~\cite{loweng21ppna} and the channel states~\cite{csi20jsac},
+is utilized in the design of the opportunistic routing,
+which decides whether or not to forward/replicate the message to the contacted node.
+%Meanwhile, the theory analysis of OppNets performance
+%is usually based on the assumption,
+%where the node contacts conform to the poisson processes.
+%Recently, machine learning is adopted in the opportunistic routing schemes design,
+%including SVM, GMM, decision tree, neural network
+%and Q-learning.
+%However, non-Poisson (GMM) two-prob model
+However, computing the routing metric requires the auxiliary information exchange among nodes,
+which may leads to the privacy disclosure of the node (even the user).
+In order to preserve the privacy of the participating node in OppNet,
+some research exploited the homomorphic encryption~\cite{pp16tvt,ppoct18tvt}
+and $k$-anonymity~\cite{face17ton,pploc18iotj}.
+The encryption techniques still can not avoid the risk
+that the malicious user infer the historical contact of a node,
+which represents the mobility of the corresponding person.
+Differential Privacy (DP), as the {\it de facto} standard for data privacy,
+has been adopted in many application fields,
+for example, the statistics of client software in Google Inc.~\cite{rappor14ccs}
+%the data collection in  
+and the data collections of popular emojis in Apple Inc.~\cite{2017Emoji}.
+%%Motivation-2
+%Another burning issues plaguing OppNets today is the privacy concern.
+%The routing auxiliary information exchanged among nodes
+%may expose the features of nodes
+%and even determine the identity of users in the restricted scenarios.
+%However, few existing privacy protections in OppNets
+%take the routing auxiliary information into account.
+%Since the Differential Privacy (DP) has been accepted
+%as the {\it de facto} standard for data privacy,
+%we adopt the differential privacy techniques
+%in the routing auxiliary information exchange
+%to provide the privacy protection.
 
-In many existing works on opportunistic routing,
-the contacts between nodes are assumed as conforming to the Poisson process assumption.
-
-which can be improved with the accurate probability 
-
-
-In this paper, we focus on the opportunistic routing in the pattern scenario, i.e., the bike sharing system.
-
+In this paper, we focus on the data dissemination 
+among bike stations of the bike-sharing system,
+where the message can be forwarded when the bicycle trip occurs.  
+%in the contact circumstance of non-poisson process, i.e., .
+Considering that the temporal pattern of the bicycle trip occurring 
+is different from the classical poisson process,
+we proposed the two-tier probability model
+to predict the future contact based on the history records.
+%to capture the multi-hop forwarding opportunities
+Moreover, differential privacy is exploited in the auxiliary information exchange
+to achieve less privacy exposure.
 The main contributions are as follows.
 \begin{itemize}
-\item {we designed the two-tier probability model
-to profile the probability density of the future contact events
-in the message lifetime.}
-\item {we employed the inter-day probability based on the poisson process
-the intra-day probability pattern based on gaussian mixture model
-to measure the probability of sequential events.
-Multiple potential routes of message forwarding
-are utilized to support the routing decision.}
-\item {we exploit the local differential privacy
-to obscure the pattern of contact events.}
+\item {we designed the two-tier probability model,
+i.e., the inter-day probability and the intra-day probability,
+to profile the probability density of the future contact occurring.}
+%we employed the inter-day probability based on the poisson process
+%the intra-day probability pattern based on gaussian mixture model
+%to measure the probability of sequential events.}
+\item {we exploited local differential privacy and the laplace mechanism 
+to obscure the published pattern of node contacts and preserve the privacy of the node.}
+\item {we converted the delivery metric based on probability density integral into the additive one,
+and proposed the routing scheme with differential privacy.}
 \item {we evaluate the proposed scheme with the benchmarks,
 such as S\&W, Epidemic, Prophet,
 in terms of the routing performance under various settings
-with the bike sharing trace.}
+with the real-world bike sharing trace.}
 \end{itemize}
 
 The rest of this paper is as follows.
 Section~\ref{sec:relatedwork} reviews the literatures about OppNets.
-Section 
+We model the contact behavior and introduce the two-tier probability model
+in Section~\ref{sec:sysmodel}.
+The routing scheme with differential privacy protection
+is described in Section~\ref{sec:method}.
+The corresponding performance is evaluated in Section~\ref{sec:pe}.
+We conclude the paper in Section~\ref{sec:conclusion}.
+

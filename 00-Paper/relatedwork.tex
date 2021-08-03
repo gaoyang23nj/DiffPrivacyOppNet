@@ -6,4 +6,93 @@ Then two existing categories of blackhole mitigating methods
 and the applications of machine learning in OppNets
 are discussed.
 
-\cite{PatADP20info} introduce the pattern aware privacy preserving method.
+\subsection{Opportunistic Routing Protocols}
+To design a geo-casting routing protocol,
+Costantino {\it et al.}~\cite{losero20tmc} forwarded the messages to the relay nodes,
+whose most frequently visited location intersected the destination zone.
+A bitmap-based routing scheme~\cite{bitmap21cn} exploited a weighted tree,
+which indicates whether the destination is reachable from the specific relay node.
+Since the transmitted data may be very large for one contact in OppNets,
+\cite{dataInten19infocom} integrated multiple attributes,
+including the contact frequency, the contact duration and buffer constraint,
+and designed the path weight as the bottleneck link capacity.
+The routing metric based on the real-time expected transmission count and the backpressure
+is proposed in~\cite{cntawloran20icdcs} to alleviate the inference from obstacles or deep fading.
+Considering that machine learning has been widespread in multiple domains,
+\cite{mlrouting19Secon} designed the Cascaded Machine Learning based routing protocol (CAML),
+where the two-stage classifier consisting of a Logistic Regression classifier and a Neural Network classifier.
+The node intimacy and the support vector machine are utilized in~\cite{rIntimacy21wcmc}
+to quantify the encounter records of opportunistic nodes.
+Considering that the excessive dependence on key nodes will shorten the life cycle of the network
+\cite{loweng21ppna} utilized the energy consumption model and the cache replacement strategy
+to realize the low energy consumption opportunistic routing algorithm.
+Zheng {\it et al.}~\cite{portal20mobihoc} proposed a transparent cross-technology opportunistic forwarding method
+in low-power wireless networks to maximize the performance gain of using heterogeneous forwarders.
+\cite{matrixcomp20cn} exploited the matrix decomposition to predict the probability of the node's contact
+and optimized the delivery path from the source node to the destination node.
+\cite{torp20trustcom} calculated the trust-based routing metric
+according to the distributions of multiple attributes,
+such as the distance, the hops, the degree and the residual energy.
+\cite{ring20cn} achieved the balance between the energy consumption and the average delay
+based on the virtual ring routing structure.
+\cite{sporadic20wcnc} utilized the regular and sporadic pattern of the node's contact
+to enhance the delivery rate in a cost-effective manner.
+
+\subsection{Security \& Privacy in OppNets}
+In order to preserve the location privacy of participants,
+Du {\it et al.}~\cite{mixzone13tvt} generated virtual nodes
+and conducted the pseudonym change in MixZones
+with the incentives of the auction mechanism.
+Zhang {\it et al.}~\cite{pp16tvt} designed a secure and privacy-preserving framework
+to protect the routing metric based on the group signature, the homomorphic encryption
+and Sakai¨C-Ohgishi-¨CKasahara (SOK) key agreement.
+\cite{cntavd17infocom} proposed a contact avoidance routing protocol,
+which quantified the probability that a message is delivered to its destination
+without being compromised by adversaries.
+Chen {\it et al.}~\cite{ppdtn17secon} protected the routing utilities and the forwarder information
+via the commutative encryption technique and the order-preserving hashing scheme.
+Through the real IDs of nodes are anonymized upon contacts,
+the real ID-based encountering information is encrypted and collected
+after the nodes disconnect in~\cite{face17ton}.
+Based on $k$-anonymity, \cite{pploc18iotj} protected the vehicle's location privacy
+by using virtual location and route confusion.
+\cite{eprivo18tvt} proposed the similarity privacy mechanism,
+which hid the neighbor list of nodes and obtained the common neighbors
+based on the Paillier homomorphic encryption scheme.
+\cite{ppoct18tvt} constructed a two-layer architecture,
+which consisted of the Yao¡¯s Millionaires-based routing decision
+and the encryption-based message delivery process.
+A trusted authority is exploited to calculate the routing utility
+and protect the privacy information of nodes in~\cite{ppdtn19info}.
+The routing algorithm in~\cite{ppsOppNet21cs}
+provided the identity and location privacy for OppNets
+with the public key sharing and the encryption.
+
+\subsection{Differential Privacy}
+Differential Privacy (DP)~\cite{Dwork14DP} has been a {\it de facto} standard for privacy protection.
+The differential privacy methods in~\cite{purdue12asonam},
+including node privacy, edge privacy and out-link privacy,
+can preserve the privacy of the graph structure.
+Bassily {\it et al.}~\cite{ldp15stoc} proposed the local differentially private (LDP) for succinct histograms.
+Several LDP protocols were generalized and analyzed to choose the optimal parameter in~\cite{ldp17Usenix}.
+RAPPOR in~\cite{rappor14ccs} estimated the client-side distributions of string-values
+drawn from the discrete data dictionary via the bloom filter and the Permanent \& Instantaneous random responses.
+Ren {\it et al.}~\cite{lopub18tifs} developed a local differentially private high-dimensional date publication algorithm
+via the dimensionality reduction strategy and the EM\cite{EM77}-based distribution estimation method.
+Since the pattern of time-series may be distorted by LDP,
+Wang {\it et al.}~\cite{PatADP20info} sampled the remarkable points
+and proposed the pattern-aware privacy preserving method based on Piecewise Linear Approximation (PLA).
+Huang {\it et al.}~\cite{pbcn20tnsm} proposed a privacy preserving approach based on clustering and graph reconstruction
+to disturb the released graph structure of the social network.
+The personalized multiple optimized unary encoding is designed in \cite{pldp21scn} to
+satisfy the personal privacy requirements.
+\cite{dpweightg21adhnetw} protected the privacy of the edge weight and the frequent subgraph
+in the weighted graph of the wireless network according to the differential privacy scheme.
+In order to preserve the privacy of the time of the event occurrence,
+the priority queue in wireless sensor network is applied the laplace noise in~\cite{tem20jnca}.
+Considering that DP may change the optimality,
+\cite{dpgame20ijcai} proposed the Privacy-Preserving Stackelberg Mechanism,
+which obfuscates the gas demand profile exchanged by the gas market,
+to also ensure that the outcomes of the resulting problem are close-to-optimality for each agent.
+\cite{DPCon20ndss} introduced several post-processing steps
+to achieve the consistency of the frequency estimation in LDP.

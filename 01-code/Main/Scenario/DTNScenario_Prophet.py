@@ -10,7 +10,7 @@ import datetime
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
 class DTNScenario_Prophet(object):
     # node_id的list routingname的list
-    def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time):
+    def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time, max_ttl):
         self.scenarioname = scenarioname
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
@@ -18,7 +18,7 @@ class DTNScenario_Prophet(object):
         for node_id in range(num_of_nodes):
             tmpRouter = RoutingProphet(node_id, num_of_nodes, min_time)
             self.listRouter.append(tmpRouter)
-            tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size)
+            tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size, max_ttl)
             self.listNodeBuffer.append(tmpBuffer)
         self.num_comm = 0
         return
@@ -26,7 +26,7 @@ class DTNScenario_Prophet(object):
     def gennewpkt(self, pkt_id, src_id, dst_id, gentime, pkt_size):
         # print('senario:{} time:{} pkt_id:{} src:{} dst:{}'.format(self.scenarioname, gentime, pkt_id, src_id, dst_id))
         newpkt = DTNPkt(pkt_id, src_id, dst_id, gentime, pkt_size)
-        self.listNodeBuffer[src_id].gennewpkt(newpkt)
+        self.listNodeBuffer[src_id].gennewpkt(gentime, newpkt)
         return
 
     # 通知每个节点更新自己的状态
@@ -101,6 +101,7 @@ class DTNScenario_Prophet(object):
         succ_ratio = total_succnum/len(listgenpkt)
         if total_succnum != 0:
             avg_delay = total_delay/total_succnum
+            avg_delay = avg_delay.total_seconds()
             output_str += 'succ_ratio:{} avg_delay:{} '.format(succ_ratio, avg_delay)
         else:
             avg_delay = ()
@@ -108,8 +109,9 @@ class DTNScenario_Prophet(object):
         output_str += 'num_comm:{}\n'.format(self.num_comm)
         output_str += 'total_hold:{} total_gen:{}, total_succ:{}\n'.format(total_pkt_hold, len(listgenpkt), total_succnum)
         print(output_str)
-        res = {'succ_ratio': succ_ratio, 'avg_delay': avg_delay, 'num_comm': self.num_comm}
-        config = {'ratio_bk_nodes': 0, 'drop_prob': 1}
+        res = {'succ_ratio': succ_ratio, 'avg_delay': avg_delay, 'num_comm': self.num_comm,
+               'num_gen':len(listgenpkt), 'num_succ':total_succnum, 'gen_freq': 0}
+        config = {}
         return output_str, res, config
 
 class RoutingProphet(object):
