@@ -6,8 +6,8 @@
 >3. init label vector $\{vis[x]\}_{1 \le x \le N}$ as $0$
 >4. /* init the Dijkstra algorithm */
 >5. **for** each $x$, $x \in \mathcal{N}$ **do**
->6.    $dis[x] \leftarrow W[i][x]$
->7.    $prev[x] \leftarrow i$
+>6.   $dis[x] \leftarrow W[i][x]$
+>7.   $prev[x] \leftarrow i$
 >8. **end for**
 >9. $vis[i] \leftarrow 1$
 >10. $count \leftarrow 1$
