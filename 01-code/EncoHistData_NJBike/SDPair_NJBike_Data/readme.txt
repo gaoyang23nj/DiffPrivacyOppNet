@@ -1,1 +1,0 @@
-按照(src,dest) pair 记录事件发生

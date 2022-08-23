@@ -1,28 +1,31 @@
 # 执行仿真的主程序
-# 比较TTPM(no noise)和其他机会路由算法的性能
+# 比较TTPM+DODP、TTPM+Lap 和 TTPM+no noise的性能
 import numpy as np
 import datetime
 import winsound
 
-from Main.Scenario.DTNScenario_EP import DTNScenario_EP
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp
-from Main.Scenario.DTNScenario_SandW import DTNScenario_SandW
-from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
+from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP
+from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp
+# 尝试加入 优化+差分隐私
 
-EncoHistDir = '../EncoHistData_NJBike/data.csv'
+EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
 # StationInfoPath = '../EncoHistData_NJBike/station_info_1.csv'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
+# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data_pukou'
 
 class Simulator(object):
-    def __init__(self, num_station, enco_file, pktgen_freq, result_file_path):
+    def __init__(self, num_station, enco_file, pktgen_freq, ttl, result_file_path):
+        # TTL为1天
+        self.ttl = ttl
+
         self.begin_to_running = datetime.datetime.now()
         # 相遇记录文件
         self.ENCO_HIST_FILE = enco_file
         # 汇总 实验结果
         self.result_file_path = result_file_path
         self.pktgen_freq = pktgen_freq
-        self.max_ttl = datetime.timedelta(days=5)
+        self.max_ttl = datetime.timedelta(days=self.ttl)
         # 节点个数默认216个, id 0~215
         self.MAX_NODE_NUM = num_station
         # 最大运行时间 执行时间 36000*24个间隔, 即24hour; 应该根据 enco_hist 进行更新
@@ -154,74 +157,50 @@ class Simulator(object):
 
     def init_scenario(self):
         self.scenaDict = {}
-        # list_scena = self.init_scenario_testSW()
-        list_scena = self.init_scenario_testRTPMDjkreLap()
+        list_scena = self.init_scenario_Lap_Pintra_OPDP()
         return list_scena
 
-    def init_scenario_testRTPMDjkreLap(self):
+
+    def init_scenario_Lap_Pintra_OPDP(self):
         index = -1
 
         # ===============================场景1 RTPM_Theory_Djk_re_Lap ===================================
         index += 1
-        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_re_Lap'
-        lap_noise_scale = [0., 0.]
+        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_re_Lap_seg24'
+        # 第一个分量加在{p}天内上，第二个分量加在P天间上
+        # 输入参数是 laplace分布的lambda参数
+        eps_P = 0.2
+        lap_noise_scale = [2, 1./eps_P]
         tmpscenario = DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp(tmp_senario_name, self.MAX_NODE_NUM, 20000,
                                                                 self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
                                                                 self.max_ttl, lap_noise_scale)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景1 EP ===================================
+        # ===============================场景1 RTPM_Theory_Djk_re_Lap ===================================
         index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_EP'
-        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000,  self.max_ttl)
+        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp_seg6'
+        # 第一个分量加在{p}天内上，第二个分量加在P天间上
+        # 输入参数是 laplace分布的lambda参数
+        eps_P = 0.2
+        lap_noise_scale = [2, 1./eps_P]
+        tmpscenario = DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp(tmp_senario_name, self.MAX_NODE_NUM, 20000,
+                                                              self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
+                                                              self.max_ttl, lap_noise_scale)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景2 Prophet ===================================
+        # # ===============================场景1 RTPM_Theory_Djk_re_Lap ===================================
         index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_Prophet'
-        tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl)
+        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_no_noise'
+        # 第一个分量加在{p}天内上，第二个分量加在P天间上
+        # 输入参数是 laplace分布的lambda参数
+        lap_noise_scale = [0, 0]
+        tmpscenario = DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp(tmp_senario_name, self.MAX_NODE_NUM, 20000,
+                                                                self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
+                                                                self.max_ttl, lap_noise_scale)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景3 SandW ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_SandW'
-        init_token = 8
-        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
 
-        # ===============================场景单个单个的实验吧===================================
-        list_scena = list(self.scenaDict.keys())
-        return list_scena
 
-    def init_scenario_testSW(self):
-        index = -1
-
-        # ===============================场景1 EP ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_EP'
-        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景3 SandW ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_SandW'
-        init_token = 8
-        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景3 SandW ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_SandW'
-        init_token = 16
-        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景3 SandW ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_SandW'
-        init_token = 32
-        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
 
         # ===============================场景单个单个的实验吧===================================
         list_scena = list(self.scenaDict.keys())
@@ -238,9 +217,9 @@ class Simulator(object):
         file_object = open(filename, ctstring, encoding="utf-8")
         gen_total_num = len(self.list_genpkt)
         file_object.write('genfreq:{} RunningTime_Min_Max:{};{} '
-                          'gen_num:{} nr_nodes:{}\n'.format(
+                          'gen_num:{} nr_nodes:{} max_ttl:{}\n'.format(
             self.GENPKT_DELTA_TIME, self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
-            gen_total_num, self.MAX_NODE_NUM))
+            gen_total_num, self.MAX_NODE_NUM, self.max_ttl))
 
         for key, value in self.scenaDict.items():
             outstr, res, config = value.print_res(self.list_genpkt)
@@ -256,7 +235,16 @@ class Simulator(object):
             res_file_object.write(str(res['succ_ratio'])+','+str(res['avg_delay'])+','+str(res['num_comm'])
                                   +','+str(res['num_gen'])+','+str(res['num_succ'])+','+str(res['gen_freq'])+',')
             if len(config) == 1:
-                res_file_object.write(str(config['lap_noise_scale'][0])+','+str(config['lap_noise_scale'][1]))
+                if config['lap_noise_scale'][0]!=0. and config['lap_noise_scale'][1] != 0.:
+                    res_file_object.write(str(2./config['lap_noise_scale'][0])+','+str(1./config['lap_noise_scale'][1])+',')
+                else:
+                    if config['lap_noise_scale'][0]==0.:
+                        str1='no_noise'
+                    if config['lap_noise_scale'][1]==0.:
+                        str2='no_noise'
+                    res_file_object.write(str1 + ',' + str2 + ',')
+            # ttl
+            res_file_object.write(str(self.ttl))
             res_file_object.write('\n')
 
         now = datetime.datetime.now()-self.begin_to_running
@@ -266,38 +254,42 @@ class Simulator(object):
         res_file_object.close()
 
 if __name__ == "__main__":
-    t1 = datetime.datetime.now()
-    print(datetime.datetime.now())
-    # 准备参数 如 station个数
-    station_info_obj = open(StationInfoPath, 'r', encoding="utf-8")
-    station_lines = station_info_obj.readlines()
-    num_station = len(station_lines)
-    station_info_obj.close()
+    for kkk in range(1):
+        t1 = datetime.datetime.now()
+        print(datetime.datetime.now())
+        # 准备参数 如 station个数
+        station_info_obj = open(StationInfoPath, 'r', encoding="utf-8")
+        station_lines = station_info_obj.readlines()
+        num_station = len(station_lines)
+        station_info_obj.close()
 
-    simdurationlist = []
+        simdurationlist = []
 
-    # result file path
-    short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    result_file_path = "res_dpoppnet_" + short_time + ".csv"
+        # result file path
+        short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        result_file_path = "res_dplapoppnet_" + short_time + ".csv"
 
-    # genpkt_freqlist = [120*60]
-    genpkt_freqlist = [20 * 60, 24 * 60, 30 * 60, 40 * 60, 60 * 60, 120 * 60]
-    # 10个mins
-    num_run = 1
-    for i in range(num_run):
-        for genpkt_freq in genpkt_freqlist:
-            print(EncoHistDir, genpkt_freq)
-            t_start = datetime.datetime.now()
-            theSimulator = Simulator(num_station, EncoHistDir, genpkt_freq, result_file_path)
-            t_end = datetime.datetime.now()
-            print('running time:{}\n'.format(t_end - t_start))
-            simdurationlist.append(t_end - t_start)
-    t2 = datetime.datetime.now()
-    print(datetime.datetime.now())
-    print(StationInfoPath)
+        # genpkt_freqlist = [60*60]
+        genpkt_freqlist = [60 * 60]
+        # 10个mins
+        num_run = 1
+        # list_ttl = [1,3,5,7] days
+        list_ttl = [1,2,3,4]
+        for i in range(num_run):
+            for ttl in list_ttl:
+                for genpkt_freq in genpkt_freqlist:
+                    print(EncoHistDir, genpkt_freq)
+                    t_start = datetime.datetime.now()
+                    theSimulator = Simulator(num_station, EncoHistDir, genpkt_freq, ttl, result_file_path)
+                    t_end = datetime.datetime.now()
+                    print('running time:{}\n'.format(t_end - t_start))
+                    simdurationlist.append(t_end - t_start)
+        t2 = datetime.datetime.now()
+        print(datetime.datetime.now())
+        print(StationInfoPath)
 
-    winsound.Beep(500, 2000)
-    print(t1)
-    print(t2)
-    print('running time:{}'.format(t2 - t1))
-    print(simdurationlist)
+        winsound.Beep(500, 2000)
+        print(t1)
+        print(t2)
+        print('running time:{}'.format(t2 - t1))
+        print(simdurationlist)

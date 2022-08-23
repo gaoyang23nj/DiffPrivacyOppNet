@@ -1,5 +1,4 @@
 # 执行仿真的主程序
-# 比较TTPM(no noise)和其他机会路由算法的性能
 import numpy as np
 import datetime
 import winsound
@@ -9,10 +8,12 @@ from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp import DTNScenario_
 from Main.Scenario.DTNScenario_SandW import DTNScenario_SandW
 from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
 
-EncoHistDir = '../EncoHistData_NJBike/data.csv'
+# EncoHistDir = '../EncoHistData_NJBike/data.csv'
 # StationInfoPath = '../EncoHistData_NJBike/station_info_1.csv'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+
+EncoHistDir = '../201706stationtype1cleanRecord/2017-6_byTime_1.csv'
+StationInfoPath = '../201706stationtype1cleanRecord/2017-6_station.csv'
 
 class Simulator(object):
     def __init__(self, num_station, enco_file, pktgen_freq, result_file_path):
@@ -26,13 +27,11 @@ class Simulator(object):
         # 节点个数默认216个, id 0~215
         self.MAX_NODE_NUM = num_station
         # 最大运行时间 执行时间 36000*24个间隔, 即24hour; 应该根据 enco_hist 进行更新
-        # self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
-        # self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/01/01 0:0:0', "%Y/%m/%d %H:%M:%S")
 
         self.MIN_RUNNING_TIMES = datetime.datetime.strptime('2017/6/1 0:0:00', "%Y/%m/%d %H:%M:%S")
-        self.BEGIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
-        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/14 23:59:59', "%Y/%m/%d %H:%M:%S")
-        # self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/7/31 23:59:59', "%Y/%m/%d %H:%M:%S")
+        self.BEGIN_RUNNING_TIMES = datetime.datetime.strptime('2017/6/15 0:0:00', "%Y/%m/%d %H:%M:%S")
+        self.MAX_RUNNING_TIMES = datetime.datetime.strptime('2017/6/30 23:59:59', "%Y/%m/%d %H:%M:%S")
+
         print(self.MIN_RUNNING_TIMES)
         print(self.MAX_RUNNING_TIMES)
         # 每个间隔的时间长度 0.1s
@@ -73,14 +72,17 @@ class Simulator(object):
 
     def read_enco_hist_file(self):
         file_object = open(self.ENCO_HIST_FILE, 'r', encoding="utf-8")
+        file_object.readline()
         tmp_all_lines = file_object.readlines()
         for index in range(len(tmp_all_lines)):
             # 读取相遇记录
-            (i_station_id, a_time, i_node, j_station_id, b_time, j_node, i_name, j_name) \
+            (A, B, C, i_station_id, D, a_time, j_station_id, E, b_time) \
                 = tmp_all_lines[index].strip().split(',')
             tm = datetime.datetime.strptime(a_time, "%Y/%m/%d %H:%M:%S")
-            i_node = int(i_node)
-            j_node = int(j_node)
+            i_station_id = int(i_station_id)
+            j_station_id = int(j_station_id)
+            i_node = list_station_id.index(i_station_id)
+            j_node = list_station_id.index(j_station_id)
             if (tm>=self.MIN_RUNNING_TIMES) and (tm<=self.MAX_RUNNING_TIMES):
                 self.list_enco_hist.append((tm, i_node, j_node))
         file_object.close()
@@ -164,7 +166,7 @@ class Simulator(object):
         # ===============================场景1 RTPM_Theory_Djk_re_Lap ===================================
         index += 1
         tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_re_Lap'
-        lap_noise_scale = [0., 0.]
+        lap_noise_scale = [0.1, 0.1]
         tmpscenario = DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp(tmp_senario_name, self.MAX_NODE_NUM, 20000,
                                                                 self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
                                                                 self.max_ttl, lap_noise_scale)
@@ -265,23 +267,40 @@ class Simulator(object):
         res_file_object.write('\n')
         res_file_object.close()
 
+
+def readstation():
+    list_station_info = []
+    list_station_id = []
+    # read station list
+    cnt = 0
+    file_object = open(StationInfoPath, 'r', encoding="utf-8")
+    file_object.readline()
+    tmp_all_lines = file_object.readlines()
+    for index in range(len(tmp_all_lines)):
+        # 读取相遇记录
+        (station_id, A, label, name, B, freq) \
+            = tmp_all_lines[index].strip().split(',')
+        station_id = int(station_id)
+        label = int(label)
+        if label == 1:
+            list_station_info.append((station_id, cnt, name))
+            list_station_id.append(station_id)
+            cnt = cnt + 1
+    file_object.close()
+    return list_station_info, list_station_id
+
 if __name__ == "__main__":
     t1 = datetime.datetime.now()
     print(datetime.datetime.now())
-    # 准备参数 如 station个数
-    station_info_obj = open(StationInfoPath, 'r', encoding="utf-8")
-    station_lines = station_info_obj.readlines()
-    num_station = len(station_lines)
-    station_info_obj.close()
+    list_station_info, list_station_id = readstation()
+    num_station = len(list_station_info)
 
     simdurationlist = []
-
     # result file path
     short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     result_file_path = "res_dpoppnet_" + short_time + ".csv"
 
-    # genpkt_freqlist = [120*60]
-    genpkt_freqlist = [20 * 60, 24 * 60, 30 * 60, 40 * 60, 60 * 60, 120 * 60]
+    genpkt_freqlist = [20 * 60]
     # 10个mins
     num_run = 1
     for i in range(num_run):
@@ -301,3 +320,4 @@ if __name__ == "__main__":
     print(t2)
     print('running time:{}'.format(t2 - t1))
     print(simdurationlist)
+

@@ -2,6 +2,8 @@
 # 1.过滤未知站点 生成'../EncoHistData_NJBike/data.csv'
 # 2.按照Src-Dst Pair 生成 '../EncoHistData_NJBike/SDPair_NJBike_Data'
 # 3.每个文件按照时间顺序排列
+
+# 生成 只包含 Pukou的数据集合！！！恢复最早以前的方案
 import os
 import pandas as pd
 import time
@@ -9,12 +11,12 @@ import datetime
 
 NanjingBike_InputData = '../NanjingBikeDataset/2017RentReturnData'
 Station1Info = '../NanjingBikeDataset/Pukou.xlsx'
-Station2Info = '../NanjingBikeDataset/Qiaobei.xlsx'
-EncoHistDir = '../EncoHistData_NJBike/data.csv'
-EncoHistBadDir = '../EncoHistData_NJBike/data_bad.csv'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
+# Station2Info = '../NanjingBikeDataset/Qiaobei.xlsx'
+EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
+EncoHistBadDir = '../EncoHistData_NJBike/data_bad_pukou.csv'
+StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
 
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data_pukou'
 
 # 该class解析文件
 class RecordPreProcess(object):
@@ -37,7 +39,7 @@ class RecordPreProcess(object):
         self.list_stationinfo_id = []
         self.count = 0
         self.read_station_info(Station1Info)
-        self.read_station_info(Station2Info)
+        # self.read_station_info(Station2Info)
 
         self.list_instation_id = []
         self.list_outstation_id = []
