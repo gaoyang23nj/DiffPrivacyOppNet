@@ -1,10 +1,10 @@
 Alg.4 presents the classical Dijkstra algorithm,
 which has been adopted in many researches, especially networking.
 Here the classical Dijkstra algorithm is used to obtain the routing metric $G$.
-The input parameters, i.e., the edge weights in the graph ($W[N][N]$),
+The input parameters, i.e., the edge weights in the graph $W[N][N]$,
 has been provided by the 16th Line of Alg.3.
 
-**Alg.4 Delivery Metric based on Dijkstra from $i$ to $d$**
+**Alg.4 Delivery Metric based on Dijkstra from i to d**
 >**Require**: $i$, $d$, $\mathcal{N}$, $W[N][N]$, $a$
 >**Ensure**: $dis[d]$
 >1. init distance vector $\{dis[x]\}_{1 \le x \le N}$ as *INF*
