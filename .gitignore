@@ -1,11 +1,4 @@
-
-01-code/东南大学所需数据.zip
-01-code/NanjingBikeDataset
-
 01-code/.idea/
-01-code/EncoHistData_NJBike/*.csv
-01-code/EncoHistData_NJBike/SDPair_NJBike_Data/*.csv
 *.pyc
 *.tmp
-*.csv
 *.bak

@@ -12,7 +12,7 @@ from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
 EncoHistDir = '../EncoHistData_NJBike/data.csv'
 # StationInfoPath = '../EncoHistData_NJBike/station_info_1.csv'
 StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
 
 class Simulator(object):
     def __init__(self, num_station, enco_file, pktgen_freq, result_file_path):

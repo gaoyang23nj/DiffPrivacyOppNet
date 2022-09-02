@@ -9,10 +9,13 @@ from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP import DTNScenario_RTPM
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp
 # 尝试加入 优化+差分隐私
 
-EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
 # StationInfoPath = '../EncoHistData_NJBike/station_info_1.csv'
-StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
 # EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data_pukou'
+# EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
+# StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
+
+EncoHistDir = '../EncoHistData_NJBike/data.csv'
+StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
 
 class Simulator(object):
     def __init__(self, num_station, enco_file, pktgen_freq, ttl, result_file_path):
