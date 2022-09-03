@@ -1,0 +1,17 @@
+genfreq:1:00:00 RunningTime_Min_Max:2017-06-01 00:00:00;2017-07-14 23:59:59 gen_num:335 nr_nodes:216 max_ttl:1 day, 0:00:00
+scenario0DTNScenario_RTPMSpdUp_Theory_Djk_re_Lap_seg24
+succ_ratio:0.11044776119402985 avg_delay:108691.972973 num_comm:1143
+total_hold:80 total_gen:335, total_succ:37
+lap_noise:[2, 5.0]
+
+scenario1DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp_seg6
+succ_ratio:0.191044776119403 avg_delay:111296.625 num_comm:476
+total_hold:115 total_gen:335, total_succ:64
+lap_noise:[2, 5.0]
+
+scenario2DTNScenario_RTPMSpdUp_Theory_Djk_no_noise
+succ_ratio:0.18208955223880596 avg_delay:80245.770492 num_comm:900
+total_hold:83 total_gen:335, total_succ:61
+lap_noise:[0, 0]
+
+running_time:9:56:15.047436+
