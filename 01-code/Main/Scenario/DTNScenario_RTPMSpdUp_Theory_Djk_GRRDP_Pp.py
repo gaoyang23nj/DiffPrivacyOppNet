@@ -2,7 +2,7 @@
 # 路径挖掘的时候, 先得到metric值,只有高于之前才继续进行
 from Main.DTNNodeBuffer import DTNNodeBuffer
 from Main.DTNPkt import DTNPkt
-from Main.Routing.RoutingRTPMSpdUp_Theory_Djk_OpDP import RoutingRTPMSpdUp_Theory_Djk_OpDP
+from Main.Routing.OpDP_Pp_Config import OpDP_Pp_Config
 
 import copy
 import numpy as np
@@ -16,14 +16,27 @@ import matplotlib.pyplot as plt
 
 # 用GMM描述 day内
 # 用access方法描述 day间
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
+
+# k-Randomized Response (RR).
+# Generalized Randomized Response
+# T. Wang, J. Blocki, N. Li, and S. Jha,
+# “Locally differentially # private protocols for frequency estimation,”
+# in Proceedings of the 26th USENIX Security Symposium, pp. 729–745, Vancouver, BC, Canada, August 2017.
+
+
+# Generalized Random Response (GRR)
+# 'Locally Differentially Private Frequency Estimation with Consistency'
+# Tianhao Wang1, Milan Lopuha¨a-Zwakenberg2, Zitao Li1, Boris Skoric2, Ninghui Li1
+# 2020
+
+from Main.Routing.RoutingRTPMSpdUp_Theory_Djk_GRRDP_Pp import RoutingRTPMSpdUp_Theory_Djk_GRRDP_Pp
+
 WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
 
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
-class DTNScenario_RTPMSpdUp_Theory_Djk_OpDP(object):
+class DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp(object):
     # node_id的list routingname的list
     def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time, max_time, max_ttl, lap_noise_scale):
         # print('memo')
@@ -40,9 +53,11 @@ class DTNScenario_RTPMSpdUp_Theory_Djk_OpDP(object):
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
         self.listRouter = []
+        theOpDPConfig = OpDP_Pp_Config(lap_noise_scale)
         for node_id in range(num_of_nodes):
-            tmpRouter = RoutingRTPMSpdUp_Theory_Djk_OpDP(node_id, num_of_nodes, min_time, max_time,
-                                                         self.list_weather, self.max_ttl, lap_noise_scale)
+            # 用来配置同样的seg
+            tmpRouter = RoutingRTPMSpdUp_Theory_Djk_GRRDP_Pp(node_id, num_of_nodes, min_time, max_time,
+                                                             self.list_weather, self.max_ttl, lap_noise_scale, theOpDPConfig)
             self.listRouter.append(tmpRouter)
             tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size, self.max_ttl)
             self.listNodeBuffer.append(tmpBuffer)

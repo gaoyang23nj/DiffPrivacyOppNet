@@ -4,18 +4,13 @@ import numpy as np
 import datetime
 import winsound
 
+from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp
-from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp
 # 尝试加入 优化+差分隐私
 
-# StationInfoPath = '../EncoHistData_NJBike/station_info_1.csv'
-# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data_pukou'
-# EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
-# StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
-
-EncoHistDir = '../EncoHistData_NJBike/data.csv'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
+EncoHistDir = '../EncoHistData_NJBike/data_qiaobei.csv'
+StationInfoPath = '../EncoHistData_NJBike/station_info_qiaobei.csv'
 
 class Simulator(object):
     def __init__(self, num_station, enco_file, pktgen_freq, ttl, result_file_path):
@@ -160,16 +155,36 @@ class Simulator(object):
 
     def init_scenario(self):
         self.scenaDict = {}
-        list_scena = self.init_scenario_Lap_Pintra_OPDP()
+        # list_scena = self.init_scenario_Lap_Pintra_OPDP()
+        list_scena = self.init_scenario_Lap_Pintra_GRRDP()
         return list_scena
 
+
+    def init_scenario_Lap_Pintra_GRRDP(self):
+        index = -1
+
+        # ===============================场景1 RTPM_Theory_Djk_GRR ===================================
+        index += 1
+        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_GRR_seg24'
+        # 第一个分量加在{p}天内上，第二个分量加在P天间上
+        # 输入参数是 laplace分布的lambda参数
+        eps_P = 0.2
+        lap_noise_scale = [2, 1./eps_P]
+        tmpscenario = DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp(tmp_senario_name, self.MAX_NODE_NUM, 20000,
+                                                                self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
+                                                                self.max_ttl, lap_noise_scale)
+        self.scenaDict.update({tmp_senario_name: tmpscenario})
+
+        # ===============================场景单个单个的实验吧===================================
+        list_scena = list(self.scenaDict.keys())
+        return list_scena
 
     def init_scenario_Lap_Pintra_OPDP(self):
         index = -1
 
         # ===============================场景1 RTPM_Theory_Djk_re_Lap ===================================
         index += 1
-        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_re_Lap_seg24'
+        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_Lap'
         # 第一个分量加在{p}天内上，第二个分量加在P天间上
         # 输入参数是 laplace分布的lambda参数
         eps_P = 0.2
@@ -270,7 +285,7 @@ if __name__ == "__main__":
 
         # result file path
         short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        result_file_path = "res_dplapoppnet_" + short_time + ".csv"
+        result_file_path = "res_oppnet_opdp_qiaobeidata_GRRdp_" + short_time + ".csv"
 
         # genpkt_freqlist = [60*60]
         genpkt_freqlist = [60 * 60]

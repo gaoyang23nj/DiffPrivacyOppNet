@@ -89,7 +89,7 @@ class DTNNodeBuffer(object):
             for pkt in self.listofpkt:
                 # 如果生成时间加上ttl大于当前时间 (message的lifespan已经耗尽)
                 if runningtime > pkt.gentime + self.max_ttl:
-                    print('delete pkt_id:{}'.format(pkt.pkt_id))
+                    # print('delete pkt_id:{}'.format(pkt.pkt_id))
                     self.listofpkt.remove(pkt)
             # self.printpktlist()
             # print('【end】pop old ...')

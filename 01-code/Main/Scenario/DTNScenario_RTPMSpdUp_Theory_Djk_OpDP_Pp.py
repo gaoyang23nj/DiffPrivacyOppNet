@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 
 # 用GMM描述 day内
 # 用access方法描述 day间
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
+# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+# StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
 WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365

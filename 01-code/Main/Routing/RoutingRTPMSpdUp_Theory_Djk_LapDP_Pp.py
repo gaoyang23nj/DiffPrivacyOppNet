@@ -9,8 +9,8 @@ import math
 import sys
 from scipy.stats import laplace
 
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
+# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
+# StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
 WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
@@ -44,7 +44,7 @@ class RoutingRTPMSpdUp_Theory_Djk_LapDP_Pp(object):
         self.GMM_Components=3
         self.MIN_SAMPLES = 8
         self.MAX_HOPE = 5
-        self.input_data_dir = EncoHistDir_SDPair
+        # self.input_data_dir = EncoHistDir_SDPair
 
         # list 记录当天的相遇事件; 例如 a_id->b_id 添加 (runningtime, a_id, b_id)
         self.contact_record_today = []

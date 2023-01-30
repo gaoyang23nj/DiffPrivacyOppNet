@@ -2,7 +2,6 @@
 # 路径挖掘的时候, 先得到metric值,只有高于之前才继续进行
 from Main.DTNNodeBuffer import DTNNodeBuffer
 from Main.DTNPkt import DTNPkt
-from Main.Routing.RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2 import RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2
 from Main.Routing.OpDP_Pp_Config import OpDP_Pp_Config
 
 import copy
@@ -17,14 +16,16 @@ import matplotlib.pyplot as plt
 
 # 用GMM描述 day内
 # 用access方法描述 day间
-EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
+# IEEE JOURNAL OF SELECTED TOPICS IN SIGNAL PROCESSING, VOL. 9, NO. 7, OCTOBER 2015
+# The Staircase Mechanism in Differential Privacy
+from Main.Routing.RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp import RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp
+
 WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
 
 # Scenario 要响应 genpkt swappkt事件 和 最后的结果查询事件
-class DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
+class DTNScenario_RTPMSpdUp_Theory_Djk_StairDP_Pp(object):
     # node_id的list routingname的list
     def __init__(self, scenarioname, num_of_nodes, buffer_size, min_time, max_time, max_ttl, lap_noise_scale):
         # print('memo')
@@ -41,11 +42,21 @@ class DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
         # 为各个node建立虚拟空间 <内存+router>
         self.listNodeBuffer = []
         self.listRouter = []
-
         theOpDPConfig = OpDP_Pp_Config(lap_noise_scale)
+
+        eps_pintra = 2./lap_noise_scale[0]
+        eps_Pinter = 1./lap_noise_scale[1]
+
+        # get pdf list
+        listpintra = theOpDPConfig.get_Stair_pdf_list(eps_pintra)
+        listPinter = theOpDPConfig.get_Stair_pdf_list(eps_Pinter)
+
+
         for node_id in range(num_of_nodes):
-            tmpRouter = RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(node_id, num_of_nodes, min_time, max_time,
-                                                         self.list_weather, self.max_ttl, lap_noise_scale, theOpDPConfig)
+            # 用来配置同样的seg
+            tmpRouter = RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp(node_id, num_of_nodes, min_time, max_time,
+                                                             self.list_weather, self.max_ttl, lap_noise_scale,
+                                                               theOpDPConfig, listpintra, listPinter)
             self.listRouter.append(tmpRouter)
             tmpBuffer = DTNNodeBuffer(self, node_id, buffer_size, self.max_ttl)
             self.listNodeBuffer.append(tmpBuffer)

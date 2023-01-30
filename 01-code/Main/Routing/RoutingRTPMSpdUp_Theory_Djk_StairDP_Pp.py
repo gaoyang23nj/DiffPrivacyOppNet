@@ -10,13 +10,12 @@ import sys
 from scipy.stats import laplace
 from cvxopt import matrix, solvers
 
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
 WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
 
-class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
-    def __init__(self, node_id, num_of_nodes, min_time, max_time, input_list_weather, max_ttl, lap_noise_scale, theconfig):
+class RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp(object):
+    def __init__(self, node_id, num_of_nodes, min_time, max_time, input_list_weather, max_ttl, lap_noise_scale, theconfig, listpintra, listPinter):
         self.node_id = node_id
         self.num_of_nodes = num_of_nodes
         self.MIN_TIME = time.strptime(min_time.strftime('%Y/%m/%d %H:%M:%S'), "%Y/%m/%d %H:%M:%S")
@@ -26,10 +25,14 @@ class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
         self.max_ttl = max_ttl
         # laplace noise的scale参数, 应该作为输入参数
         # 天内概率
-        self.LapNoiseScale_pintra = lap_noise_scale[0]
+        self.eps_pintra = 2./lap_noise_scale[0]
         # 天间概率
-        self.LapNoiseScale_Pinter = lap_noise_scale[1]
+        self.eps_Pinter = 1./lap_noise_scale[1]
         self.config = theconfig
+
+        # get pdf list
+        self.StairMatrix_Pinter = listpintra
+        self.StairMatrix_pintra = listPinter
 
         # log的底数
         self.for_log = 0.5
@@ -95,48 +98,16 @@ class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
 
         # 5.Opt+Dp
         # 5.1 P
+
         self.ProbValueBucket = np.zeros(self.config.length_P)
         # 5.2 p
-        # self.pdfValueBucket = np.zeros(self.config.num_pdf_comb)
+        self.pdfValueBucket = np.zeros(self.config.num_pdf_comb)
 
-    # =======================  用于Opt DP的函数     ====================
+    # =======================  用于 DP的函数     ====================
     # 建立映射表
 
-    # Optimization DP; 根据先验概率 和 差分隐私的要求, 计算最优的概率转移矩阵
-    def optProb(self, PrioProb):
-        # Pr(A) * p_{a,c} * (从a变成c偏差)
-        cnp = np.zeros((self.config.length_P * self.config.length_P, 1))
-        label = 0
-        def getCost(c, a):
-            return (self.config.delta_P * (c+0.5) - self.config.delta_P * (a+0.5)) ** 2
-        for a in range(self.config.length_P):
-            for c in range(self.config.length_P):
-                cnp[label, 0] = PrioProb[a] * getCost(c, a)
-                label = label + 1
 
-        ccx = matrix(cnp)
-        print('cal ... opt Prob')
-        sol = solvers.lp(ccx, self.config.Gcx, self.config.hcx, self.config.Acx, self.config.bcx)
-        xSolution = np.array(sol['x'])
-        tranP = xSolution.reshape((self.config.length_P, self.config.length_P))
-        return tranP
 
-    def opt_pdf(self, PrioP_pdf):
-        cnp = np.zeros((self.config.num_pdf_comb * self.config.num_pdf_comb, 1))
-        label = 0
-        for a in range(self.config.num_pdf_comb):
-            for c in range(self.config.num_pdf_comb):
-                l1 = np.array(self.config.list_pdf[c])
-                l2 = np.array(self.config.list_pdf[a])
-                tmp = ((l1 - l2) * (l1 - l2)).sum()
-                cnp[label, 0] = PrioP_pdf[a] * tmp
-                label = label + 1
-        ccx = matrix(cnp)
-        print('cal ... opt pdf')
-        sol = solvers.lp(ccx, self.config.Gcx_pdf, self.config.hcx_pdf, self.config.Acx_pdf, self.config.bcx_pdf)
-        xSolution = np.array(sol['x'])
-        tran = xSolution.reshape((self.config.num_pdf_comb, self.config.num_pdf_comb))
-        return tran
 
     # =======================  用于每日更新notify_new_day的内部函数     ====================
     # 1)day间, rho_star 通过每天的contact次数转换得到;
@@ -174,39 +145,42 @@ class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
 
         # 对self.P_holiday[-1][1] self.P_workday[-1][1]进行差分隐私扰动
         # 扰动后的结果放在self.all_P_holiday[self.node_id] = tmp 和 self.all_P_workday[self.node_id]
-        # 1.整理获取先验概率
+        # 1.取出 天间概率数值tmpP
         if isholiday:
             self.Ptrue_holiday = self.P_holiday[-1][1]
             tmpP = self.P_holiday[-1][1].copy()
         else:
             self.Ptrue_workday = self.P_workday[-1][1]
             tmpP = self.P_workday[-1][1].copy()
-        for i in range(self.num_of_nodes):
-            loc = np.math.floor(tmpP[i]/self.config.delta_P)
-            if loc == self.config.length_P:
-                loc = loc - 1
-            self.ProbValueBucket[loc] = self.ProbValueBucket[loc] + 1
-        PrioProb = self.ProbValueBucket / np.sum(self.ProbValueBucket)
 
-        tranP = self.optProb(PrioProb)
+        # 2.获取目标位置; 采用Generalized Random Response (GRR) 方法;
+        # 2.1 随机取(0,1) 若小于e^eps/(e^eps+d-1) 则 保持不变;
+        # 否则 从(self.config.length_P - 1)个中随机采用其中的一个数值
         OutputProb = np.zeros(self.num_of_nodes)
         once = np.random.random(self.num_of_nodes)
+
         for i in range(self.num_of_nodes):
-            loc = np.math.floor(tmpP[i] / self.config.delta_P)
-            tmp = 0.
-            if loc == self.config.length_P:
-                loc = loc-1
-            for target in range(tranP.shape[1]):
-                if once[i] > tmp and once[i] < tmp + tranP[loc, target]:
+            addvalue = -np.inf
+            for j in range(self.StairMatrix_Pinter.shape[0]):
+                if once[i] < self.StairMatrix_Pinter[j][3]:
+                    tmp = once[i] - self.StairMatrix_Pinter[j][0]
+                    addvalue = self.StairMatrix_Pinter[j][0] + tmp/self.StairMatrix_Pinter[j][2]
                     break
-                tmp = tmp + tranP[loc, target]
-            OutputProb[i] = (target + 0.5) * self.config.delta_P
+            if addvalue == -np.inf:
+                print('Internal Err! StairDP')
+            newvalue = addvalue + tmpP[i]
+            if newvalue < 0.:
+                newvalue = 0.
+            elif newvalue > 1.:
+                newvalue = 1.
+
+            OutputProb[i] = newvalue
             err = err + (OutputProb[i] - tmpP[i])**2
         if isholiday:
             self.all_P_holiday[self.node_id] = OutputProb.copy()
         else:
             self.all_P_workday[self.node_id] = OutputProb.copy()
-        print('OpDP node_{}: err:{}'.format(self.node_id, err))
+        # print('OpDP node_{}: err:{}'.format(self.node_id, err))
 
     # day内, 执行GMM; intra-day probability density:GMM参数/24小时概率串
     def __process_pdf_intraday_withGMM(self, update_y_day):
@@ -257,27 +231,36 @@ class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
                         loc = once_idx
                         loc_probs = np.array(self.config.list_pdf[once_idx])
                 now_list.append((b_id, loc, loc_probs, tmp_pdf))
-                # self.pdfValueBucket[loc] = self.pdfValueBucket[loc] + 1
+                self.pdfValueBucket[loc] = self.pdfValueBucket[loc] + 1
 
-        # 2. opt 计算转移矩阵
-        # if np.sum(self.pdfValueBucket) < self.default:
-        #     return
+        # 2. 获得 GRR处理之后的概率序列 {p}
+        if np.sum(self.pdfValueBucket) < self.default:
+            return
         # PrioP_pdf = self.pdfValueBucket / np.sum(self.pdfValueBucket)
         # Tran = self.opt_pdf(PrioP_pdf)
         # 3.计算转移后的结果 即扰动后的结果
         for ele in now_list:
             (b_id, loc, loc_probs, tmp_pdf) = ele
-            once = np.random.random()
-            tmp = 0.
-            target = -1
-            for target in range(self.config.tran.shape[1]):
-                if once > 0. and once < tmp + self.config.tran[loc, target]:
-                    break
-                tmp = tmp + self.config.tran[loc, target]
-            outprob = np.array(self.config.list_pdf[target])
-            # err_opt = ((outprob - tmp_pdf) * (outprob - tmp_pdf)).sum()
-            # print('err_opt:{},{}->{}'.format(err_opt, i, j))
-            tmp_lap_probs[b_id, :] = outprob
+            once = np.random.random(self.config.num_pdf_seg)
+            newvalue = np.zeros(self.config.num_pdf_seg)
+            for i in range(self.config.num_pdf_seg):
+                addvalue = -np.inf
+                for j in range(self.StairMatrix_pintra.shape[0]):
+                    if once[i]<self.StairMatrix_pintra[j][3]:
+                        tmp = once[i]-self.StairMatrix_pintra[j][0]
+                        addvalue = self.StairMatrix_pintra[j][0] + tmp/self.StairMatrix_pintra[j][2]
+                        break
+                if addvalue == -np.inf:
+                    print('Internal Err! StairDP')
+                newvalue[i] = addvalue + tmp_pdf[i]
+                if newvalue[i] < 0.:
+                    newvalue[i] = 0.
+            # if newvalue approaches to [0,0,0], be 0 again; divide zero err!
+            if np.sum(newvalue) > np.power(0.1, 10):
+                newvalue = newvalue/np.sum(newvalue)
+            else:
+                newvalue = np.zeros(self.config.num_pdf_seg)
+            tmp_lap_probs[b_id, :] = newvalue
         # 结果整理后 放入备用
         if isholiday:
             self.all_pdf_holiday[self.node_id] = tmp_lap_probs.copy()
@@ -421,7 +404,7 @@ class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp_v2(object):
         nr_hours = math.ceil(delta_time.total_seconds()/(3600*n_hour))
         runningtime = time.strptime(runningtime.strftime('%Y/%m/%d %H:%M:%S'),
                                     "%Y/%m/%d %H:%M:%S")
-        curr_tmhour = runningtime.tm_hour
+        curr_tmhour = math.floor(runningtime.tm_hour/n_hour)
 
         # 1.计算各跳权重（从seq计算得到）
         matrix = np.ones((self.num_of_nodes, self.num_of_nodes)) * sys.float_info.max

@@ -30,6 +30,59 @@ class OpDP_Pp_Config(object):
         # npzfile = np.load(EPS_TRAN_PDF)
         # self.tran = npzfile['tran']
 
+    # Stair DP
+    def get_Stair_pdf_list(self, eps):
+        gamma = 1 / (1 + np.exp(eps / 2))
+        Delta = 0.1
+        b = np.exp(-eps)
+        # c0 = np.exp(-eps*0) + np.exp(-eps) + np.exp(-eps*2) + ...
+        c0 = 1 / (1 - np.exp(-eps))
+        a_gamma = 1 / (2 * Delta * c0)
+        MAX = 10
+        range_value_list = []
+        for k in range(MAX + 1):
+            if k == 0:
+                value = np.exp(-k * eps) * a_gamma
+                print(k, '[{},{}]:{}'.format(0., gamma * Delta, value))
+                range_value_list.append((0, gamma * Delta, value))
+            else:
+                value = np.exp(-k * eps) * a_gamma
+                if k == MAX:
+                    teriminal = MAX * Delta
+                else:
+                    teriminal = (k + gamma) * Delta
+                print(k, '[{},{}]:{}'.format((k - 1 + gamma) * Delta, teriminal, value))
+                range_value_list.append(((k - 1 + gamma) * Delta, teriminal, value))
+        print(range_value_list)
+
+        i = len(range_value_list) - 1
+        new_range_value_list = []
+        while i >= 1:
+            new_range_value_list.append((-range_value_list[i][1], -range_value_list[i][0], range_value_list[i][2]))
+            i = i - 1
+        print(new_range_value_list)
+        new_range_value_list.append((-range_value_list[0][1], range_value_list[0][1], range_value_list[0][2]))
+        new_range_value_list.extend(range_value_list[1:])
+        print(new_range_value_list)
+
+        # from, to, value
+        res = np.zeros((len(new_range_value_list), 4))
+        res[:, :3] = np.array(new_range_value_list)
+        # normalization in [-1,1]
+        sum = 0.
+        for i in range(res.shape[0]):
+            sum = sum + (res[i][1] - res[i][0]) * res[i][2]
+        print('sum:{}'.format(sum))
+        for i in range(res.shape[0]):
+            res[i][2] = res[i][2] / sum
+        sum = 0.
+        for i in range(res.shape[0]):
+            sum = sum + (res[i][1] - res[i][0]) * res[i][2]
+            res[i][3] = sum
+        print('sum:{}'.format(sum))
+        print(res)
+        return res
+
     def getone(self, a, i):
         if i == a.size:
             if sum(a) == 1.:
@@ -45,7 +98,7 @@ class OpDP_Pp_Config(object):
 
     # 为pdf的opt+DP 做出s.t.
     def set_st_for_pdf(self):
-        epsp = 1. / self.LapNoiseScale_pintra
+        epsp = 2. / self.LapNoiseScale_pintra
         w = np.exp(epsp)
         print('set s.t. ...')
         # 由a c 导出 tranp转成行矩阵对应的位置 c*length+a

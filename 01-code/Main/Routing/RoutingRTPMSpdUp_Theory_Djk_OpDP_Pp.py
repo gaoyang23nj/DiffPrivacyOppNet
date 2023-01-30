@@ -10,7 +10,6 @@ import sys
 from scipy.stats import laplace
 from cvxopt import matrix, solvers
 
-StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
 WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
@@ -25,10 +24,11 @@ class RoutingRTPMSpdUp_Theory_Djk_OpDP_Pp(object):
         self.list_weather = input_list_weather
         self.max_ttl = max_ttl
         # laplace noise的scale参数, 应该作为输入参数
-        # 天内概率
-        self.LapNoiseScale_pintra = lap_noise_scale[0]
-        # 天间概率
-        self.LapNoiseScale_Pinter = lap_noise_scale[1]
+        # noise is added from self.config weight 'w'
+        # # 天内概率
+        # self.LapNoiseScale_pintra = lap_noise_scale[0]
+        # # 天间概率
+        # self.LapNoiseScale_Pinter = lap_noise_scale[1]
         self.config = theconfig
 
         # log的底数
