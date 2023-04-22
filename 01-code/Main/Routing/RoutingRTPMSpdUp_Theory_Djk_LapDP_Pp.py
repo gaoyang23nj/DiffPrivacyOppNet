@@ -243,7 +243,8 @@ class RoutingRTPMSpdUp_Theory_Djk_LapDP_Pp(object):
     def __precdit_GMM(self, dateset):
         clf = mixture.GaussianMixture(n_components=self.GMM_Components, covariance_type='diag')
         clf.fit(dateset)
-        XX = np.linspace(0, self.num_seg - 1, self.num_seg).reshape(-1, 1)
+        # XX = np.linspace(0, self.num_seg - 1, self.num_seg).reshape(-1, 1)
+        XX = np.linspace(0.5, 23.5, 24).reshape(-1, 1)
         Z = clf.score_samples(XX)
         probs = np.exp(Z)
         sum_probs = probs.sum()

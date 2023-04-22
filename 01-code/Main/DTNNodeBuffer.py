@@ -45,7 +45,8 @@ class DTNNodeBuffer(object):
                 self.listofpktid_hist.append(receivedpkt.pkt_id)
                 cppkt.succ_time = runningtime
                 self.listofsuccpkt.append(cppkt)
-            isReach = True
+                # only when first reach the destination, label it
+                isReach = True
         else:
             self.listofpktid_hist.append(cppkt.pkt_id)
             isDelPkt_for_room = self.__mkroomaddpkt(cppkt, False)
@@ -148,5 +149,5 @@ class DTNNodeBufferPri(DTNNodeBuffer):
 
     def receivepkt(self, runningtime, receivedpkt):
         assert(isinstance(receivedpkt, DTNPktPri))
-        isReach = super(DTNNodeBufferPri, self).receivepkt(runningtime, receivedpkt)
+        isReach, isDelPkt_for_room = super(DTNNodeBufferPri, self).receivepkt(runningtime, receivedpkt)
         return isReach

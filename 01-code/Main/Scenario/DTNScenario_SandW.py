@@ -65,16 +65,16 @@ class DTNScenario_SandW(object):
                     totran_pktlist.insert(0, cppkt)
                 else:
                     totran_pktlist.append(cppkt)
-                break
+                # break
         for tmp_pkt in totran_pktlist:
             # 若抵达的是目的节点(即b_id == tmp_pkt.dst_id) 则a_id删掉该pkt的副本
             # 否则token改为 原来的-changed
             changed_token = math.floor(tmp_pkt.token/2)
             tmp_pkt.token = changed_token
             if tmp_pkt.dst_id == b_id:
-                isReach = self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
+                isReach, isDelPkt_for_room = self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
                 self.num_comm = self.num_comm + 1
-                assert(isReach)
+                # assert(isReach)
                 self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
             else:
                 if changed_token > 0:

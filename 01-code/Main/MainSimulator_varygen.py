@@ -2,7 +2,6 @@
 # 比较TTPM(no noise)和其他机会路由算法的性能
 import numpy as np
 import datetime
-import winsound
 
 from Main.Scenario.DTNScenario_SMART import DTNScenario_SMART
 from Main.Scenario.DTNScenario_DAS import DTNScenario_DAS
@@ -10,13 +9,6 @@ from Main.Scenario.DTNScenario_EP import DTNScenario_EP
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp
 from Main.Scenario.DTNScenario_SandW import DTNScenario_SandW
 from Main.Scenario.DTNScenario_Prophet import DTNScenario_Prophet
-
-# EncoHistDir = '../EncoHistData_NJBike/data.csv'
-# StationInfoPath = '../EncoHistData_NJBike/station_info.csv'
-# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data'
-
-# EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
-# StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
 
 EncoHistDir = '../EncoHistData_NJBike/data_qiaobei.csv'
 StationInfoPath = '../EncoHistData_NJBike/station_info_qiaobei.csv'
@@ -161,7 +153,6 @@ class Simulator(object):
 
     def init_scenario(self):
         self.scenaDict = {}
-        # list_scena = self.init_scenario_testSW()
         list_scena = self.init_scenario_testRTPMDjkreLap()
         return list_scena
 
@@ -212,40 +203,6 @@ class Simulator(object):
         # ===============================场景单个单个的实验吧===================================
         list_scena = list(self.scenaDict.keys())
         return list_scena
-
-    # def init_scenario_testSW(self):
-    #     index = -1
-    #
-    #     # ===============================场景1 EP ===================================
-    #     index += 1
-    #     tmp_senario_name = 'scenario' + str(index) + '_EP'
-    #     tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl)
-    #     self.scenaDict.update({tmp_senario_name: tmpscenario})
-    #
-    #     # ===============================场景3 SandW ===================================
-    #     index += 1
-    #     tmp_senario_name = 'scenario' + str(index) + '_SandW'
-    #     init_token = 8
-    #     tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-    #     self.scenaDict.update({tmp_senario_name: tmpscenario})
-    #
-    #     # ===============================场景3 SandW ===================================
-    #     index += 1
-    #     tmp_senario_name = 'scenario' + str(index) + '_SandW'
-    #     init_token = 16
-    #     tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-    #     self.scenaDict.update({tmp_senario_name: tmpscenario})
-    #
-    #     # ===============================场景3 SandW ===================================
-    #     index += 1
-    #     tmp_senario_name = 'scenario' + str(index) + '_SandW'
-    #     init_token = 32
-    #     tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-    #     self.scenaDict.update({tmp_senario_name: tmpscenario})
-    #
-    #     # ===============================场景单个单个的实验吧===================================
-    #     list_scena = list(self.scenaDict.keys())
-    #     return list_scena
 
     # 打印出结果
     def print_res(self, filename, ctstring):
@@ -301,7 +258,7 @@ if __name__ == "__main__":
     result_file_path = "res_oppnet_varygen_qiaobeidata_" + short_time + ".csv"
 
     # genpkt_freqlist = [120*60]
-    genpkt_freqlist = [20 * 60, 24 * 60, 30 * 60, 40 * 60, 60 * 60, 120 * 60]
+    genpkt_freqlist = [60 * 60, 20 * 60, 10 * 60, 400, 5 * 60, 200]
     # 10个mins
     num_run = 1
     for i in range(num_run):
@@ -316,7 +273,6 @@ if __name__ == "__main__":
     print(datetime.datetime.now())
     print(StationInfoPath)
 
-    winsound.Beep(500, 2000)
     print(t1)
     print(t2)
     print('running time:{}'.format(t2 - t1))

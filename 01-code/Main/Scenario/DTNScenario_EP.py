@@ -46,6 +46,7 @@ class DTNScenario_EP(object):
         b_listpkt = self.listNodeBuffer[b_id].getlistpkt()
         a_listpkt = self.listNodeBuffer[a_id].getlistpkt()
         # hist列表 和 当前内存里都没有 来自a的pkt   a才有必要传输
+        label_succ = 0
         for a_pkt in a_listpkt:
             isDuplicateExist = False
             for bpktid_hist in b_listpkt_hist:
@@ -60,17 +61,34 @@ class DTNScenario_EP(object):
             if not isDuplicateExist:
                 cppkt = copy.deepcopy(a_pkt)
                 if a_pkt.dst_id == b_id:
-                    totran_pktlist.insert(0, cppkt)
+                    totran_pktlist.insert(label_succ, cppkt)
+                    label_succ = label_succ + 1
                 else:
                     totran_pktlist.append(cppkt)
-                break
+                # break
         # Epidemic的路由方法 都转发
         for tmp_pkt in totran_pktlist:
             # 若抵达的是目的节点(即b_id == tmp_pkt.dst_id) 则a_id删掉该pkt的副本
-            isReach = self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
+            isReach, isDelPkt_for_room = self.listNodeBuffer[b_id].receivepkt(runningtime, tmp_pkt)
+            # print('transmit [from {} to {}], pkt_id:{}'.format(a_id, b_id, tmp_pkt.pkt_id))
             self.num_comm = self.num_comm + 1
+
+            # BEGIN_RUNNING_TIMES = datetime.datetime.strptime('2017/7/1 0:0:00', "%Y/%m/%d %H:%M:%S")
+            # ts = int((runningtime - BEGIN_RUNNING_TIMES).total_seconds())
+            # tmp_str = '[src:{} dst:{}] M{} transmit from p{} to p{}'.format(
+            #     tmp_pkt.src_id, tmp_pkt.dst_id, tmp_pkt.pkt_id, a_id, b_id)
             if isReach:
-                self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
+                # 提醒 发起节点删除该pkt
+                # 标注one不采用
+                # self.listNodeBuffer[a_id].deletepktbyid(runningtime, tmp_pkt.pkt_id)
+                # tmp_str = tmp_str + ', M{} delivered'.format(tmp_pkt.pkt_id)
+                # print(tmp_str)
+                pass
+            else:
+                # reach the destination, but is not the first copy of this message
+                # if tmp_pkt.dst_id != b_id:
+                #     print(tmp_str)
+                pass
 
     def print_res(self, listgenpkt):
         output_str = '{}\n'.format(self.scenarioname)

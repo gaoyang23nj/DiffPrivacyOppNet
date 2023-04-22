@@ -180,7 +180,7 @@ if __name__ == "__main__":
         all_matrix = get_FP_FN_matrix()
 
     # granularity 0.01
-    list_th = np.arange(0, 1, 0.01)
+    list_th = np.arange(0, 1.01, 0.01)
     list_FP_rate = np.ones((len(list_th)))*-1
     list_FN_rate = np.ones((len(list_th)))*-1
     for threshold_i in range(len(list_th)):

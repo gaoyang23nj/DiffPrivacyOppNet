@@ -80,7 +80,7 @@ class DTNScenario_SMART(object):
                     totran_pktlist.insert(0, cppkt)
                 else:
                     totran_pktlist.append(cppkt)
-                break
+                # break
         for tmp_pkt in totran_pktlist:
             # <是目的节点 OR P值更大> 才进行传输; 单播 只要传输就要删除原来的副本
             if tmp_pkt.dst_id == b_id:

@@ -12,7 +12,6 @@ import datetime
 import time
 from sklearn import mixture
 import os
-import matplotlib.pyplot as plt
 
 # 用GMM描述 day内
 # 用access方法描述 day间
@@ -20,7 +19,7 @@ import matplotlib.pyplot as plt
 # The Staircase Mechanism in Differential Privacy
 from Main.Routing.RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp import RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp
 
-WeatherInfo = '../NanjingBikeDataset/Pukou_Weather.xlsx'
+WeatherInfo = '../EncoHistData_NJBike/Pukou_Weather.xlsx'
 
 NUM_DAYS_INYEAR = 365
 

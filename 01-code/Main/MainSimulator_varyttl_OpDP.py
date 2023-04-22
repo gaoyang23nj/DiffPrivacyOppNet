@@ -2,17 +2,12 @@
 # 比较TTPM+DODP、TTPM+Lap 和 TTPM+no noise的性能
 import numpy as np
 import datetime
-import winsound
 
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_StairDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_StairDP_Pp
 # 尝试加入 优化+差分隐私
-
-# EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
-# StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
-# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data_pukou'
 
 EncoHistDir = '../EncoHistData_NJBike/data_qiaobei.csv'
 StationInfoPath = '../EncoHistData_NJBike/station_info_qiaobei.csv'
@@ -296,7 +291,6 @@ if __name__ == "__main__":
         short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         result_file_path = "res_oppnet_varyttl_qiaobeidata_" + short_time + ".csv"
 
-        # genpkt_freqlist = [60*60]
         genpkt_freqlist = [60 * 60]
         # 10个mins
         num_run = 1
@@ -315,7 +309,6 @@ if __name__ == "__main__":
         print(datetime.datetime.now())
         print(StationInfoPath)
 
-        winsound.Beep(500, 2000)
         print(t1)
         print(t2)
         print('running time:{}'.format(t2 - t1))

@@ -1,3 +1,6 @@
 01-code/.idea/
 *.pyc
 *.bak
+01-code/Main/PandpforOne/*.csv
+
+05-the-one-master/the-one-master/.metadata/*

@@ -322,35 +322,18 @@ class RoutingRTPMSpdUp_Theory_Djk_StairDP_Pp(object):
     def __precdit_GMM(self, dateset, timelen):
         clf = mixture.GaussianMixture(n_components=self.GMM_Components, covariance_type='diag')
         clf.fit(dateset)
-        XX = np.linspace(0, timelen - 1, timelen).reshape(-1, 1)
+        tmp_width = 24/timelen
+        # XX = np.linspace(0, timelen - 1, timelen).reshape(-1, 1)
+        XX = np.linspace(tmp_width/2, 24-(tmp_width/2), timelen).reshape(-1, 1)
         Z = clf.score_samples(XX)
         probs = np.exp(Z)
         sum_probs = probs.sum()
         score = clf.score(XX)
-        # add Laplace Noise
-
-        # lap_noise = laplace.rvs(loc=0., scale=self.LapNoiseScale, size=24)
-        # probs_lap = probs + lap_noise
-        # for i in range(24):
-        #     if probs_lap[i] < 0:
-        #         probs_lap[i] = 0.
-        # normalize
-
         if np.sum(probs) > self.default:
             # print('sum probs:{} probs_lap:{}'.format(np.sum(probs), np.sum(probs_lap)))
             nm_probs = probs / np.sum(probs)
         else:
             nm_probs = np.zeros(timelen)
-
-        # if np.sum(probs_lap)>default:
-        #     nm_probs_lap = probs_lap / np.sum(probs_lap)
-        # else:
-        #     nm_probs_lap = np.zeros(24)
-
-        # print(Z)
-        # print(probs)
-        # print(sum_probs)
-        # return nm_probs, (clf.weights_, clf.means_, clf.covariances_), nm_probs_lap
         return nm_probs, (clf.weights_, clf.means_, clf.covariances_)
 
     # def __comp_GMM(self, x, weights_, means_, vars_):

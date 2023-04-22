@@ -2,17 +2,11 @@
 # 比较不同的epsilon 对性能的影响
 import numpy as np
 import datetime
-import winsound
 
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_GRRDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_OpDP_Pp
 from Main.Scenario.DTNScenario_RTPMSpdUp_Theory_Djk_StairDP_Pp import DTNScenario_RTPMSpdUp_Theory_Djk_StairDP_Pp
-
-# EncoHistDir = '../EncoHistData_NJBike/data_pukou.csv'
-# # StationInfoPath = '../EncoHistData_NJBike/station_info_1.csv'
-# StationInfoPath = '../EncoHistData_NJBike/station_info_pukou.csv'
-# EncoHistDir_SDPair = '../EncoHistData_NJBike/SDPair_NJBike_Data_pukou'
 
 EncoHistDir = '../EncoHistData_NJBike/data_qiaobei.csv'
 StationInfoPath = '../EncoHistData_NJBike/station_info_qiaobei.csv'
@@ -317,7 +311,6 @@ if __name__ == "__main__":
         print(datetime.datetime.now())
         print(StationInfoPath)
 
-        winsound.Beep(500, 2000)
         print(t1)
         print(t2)
         print('running time:{}'.format(t2 - t1))
