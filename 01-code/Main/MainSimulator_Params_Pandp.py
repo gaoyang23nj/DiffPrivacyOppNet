@@ -1,6 +1,5 @@
 # 执行仿真的主程序
 # 比较TTPM(no noise)和其他机会路由算法的性能
-# compare with one; need store P and p every day for every node
 import numpy as np
 import datetime
 
@@ -61,13 +60,7 @@ class Simulator(object):
         print('1) read enco file end!')
         print(datetime.datetime.now())
         # winsound.Beep(200, 500)
-        self.filename_genM = 'MsgGen_' + str(self.pktgen_freq) + '.txt'
-        print('1) read enco file end :{}!'.format(self.filename_genM))
-        isReadGenFile = True
-        if isReadGenFile:
-            self.read_gen_event()
-        else:
-            self.build_gen_event()
+        self.build_gen_event()
         print('2) build gen event end!')
         # 初始化各个场景 spamming节点的比例
         self.init_scenario()
@@ -93,7 +86,6 @@ class Simulator(object):
         file_object.close()
 
     def build_gen_event(self):
-        f = open(self.filename_genM, 'w+')
         gen_time = self.BEGIN_RUNNING_TIMES
         while True:
             gen_time = gen_time + self.GENPKT_DELTA_TIME
@@ -103,31 +95,12 @@ class Simulator(object):
             # 3-86-6
             # (src_index, dst_index) = (3, 6)
             self.list_gen_eve.append((gen_time, self.pktid_nextgen, src_index, dst_index))
-            total_seconds = int((gen_time-self.BEGIN_RUNNING_TIMES).total_seconds())
-            f.write('{} C {} {} {} 5000000\n'.format(total_seconds, self.pktid_nextgen, src_index, dst_index))
             self.pktid_nextgen = self.pktid_nextgen + 1
         print('num_gen_eve:', len(self.list_gen_eve))
-        f.close()
-
-    def read_gen_event(self):
-        f = open(self.filename_genM, 'r')
-        gen_time = self.BEGIN_RUNNING_TIMES
-        lines = f.readlines()
-        for line in lines:
-            terms = line.split(' ')
-            if terms[1] == 'C':
-                gen_time = self.BEGIN_RUNNING_TIMES + datetime.timedelta(seconds=int(terms[0]))
-                src_index = int(terms[3])
-                dst_index = int(terms[4])
-                self.list_gen_eve.append((gen_time, self.pktid_nextgen, src_index, dst_index))
-                self.pktid_nextgen = self.pktid_nextgen + 1
-        assert self.pktid_nextgen == len(self.list_gen_eve)
-        print('num_gen_eve:', len(self.list_gen_eve))
-        f.close()
 
     def run(self):
-        # tmp变量决定了 从哪一天起 开始对Pandp进行每天更新
         tmp = self.MIN_RUNNING_TIMES
+
         while self.sim_TimeNow <= self.MAX_RUNNING_TIMES:
             gen_time = self.MAX_RUNNING_TIMES
             enco_time = self.MAX_RUNNING_TIMES
@@ -151,9 +124,6 @@ class Simulator(object):
                 # 各scenario生成pkt, pkt大小为100k
                 # print('GEN EVE: time:{} pkt_id:{} src:{} dst:{}'.format(self.sim_TimeNow, self.list_gen_eve[0][1],
                 #                                                         self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
-                # t_seconds = (self.sim_TimeNow-self.BEGIN_RUNNING_TIMES).total_seconds()
-                # print('MSG @{} {} [{}->{}] size:5000000 CREATE'.format(t_seconds, self.list_gen_eve[0][1],
-                #                                                        self.list_gen_eve[0][2], self.list_gen_eve[0][3]))
                 for key, value in self.scenaDict.items():
                     value.gennewpkt(self.list_gen_eve[0][1], self.list_gen_eve[0][2], self.list_gen_eve[0][3],
                                     self.sim_TimeNow, 500)
@@ -170,9 +140,6 @@ class Simulator(object):
                 # 执行相遇事件list
                 tmp_enc = self.list_enco_hist[0]
                 # print('CONTACT: time:{} a:{} b:{}'.format(self.sim_TimeNow, tmp_enc[1], tmp_enc[2]))
-                # CONN up @1604.0 0->79
-                # t_seconds = (self.sim_TimeNow-self.BEGIN_RUNNING_TIMES).total_seconds()
-                # print('CONN up @{} {}->{}'.format(t_seconds, tmp_enc[1], tmp_enc[2]))
                 for key, value in self.scenaDict.items():
                     value.swappkt(self.sim_TimeNow, tmp_enc[1], tmp_enc[2])
                 self.list_enco_hist.pop(0)
@@ -187,9 +154,7 @@ class Simulator(object):
 
     def init_scenario(self):
         self.scenaDict = {}
-        list_scena = self.init_scenario_testRTPMDjkre_6alg()
-        # list_scena = self.init_scenario_testRTPMDjkre()
-        # list_scena = self.init_scenario_testEP()
+        list_scena = self.init_scenario_testRTPMDjkre()
         return list_scena
 
     def init_scenario_testRTPMDjkre(self):
@@ -202,66 +167,6 @@ class Simulator(object):
                                                        self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
                                                        self.max_ttl)
         self.scenaDict.update({tmp_senario_name: tmpscenario})
-        # ===============================场景单个单个的实验吧===================================
-        list_scena = list(self.scenaDict.keys())
-        return list_scena
-
-    def init_scenario_testEP(self):
-        index = -1
-
-        # ===============================场景1 EP ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_EP'
-        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000,  self.max_ttl)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-        # ===============================场景单个单个的实验吧===================================
-        list_scena = list(self.scenaDict.keys())
-        return list_scena
-
-    def init_scenario_testRTPMDjkre_6alg(self):
-        index = -1
-
-        # ===============================场景0 RTPM_Theory_Djk_re_Lap ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + 'DTNScenario_RTPMSpdUp_Theory_Djk_re_Lap'
-        lap_noise_scale = [0., 0.]
-        tmpscenario = DTNScenario_RTPMSpdUp_Theory_Djk_LapDP_Pp(tmp_senario_name, self.MAX_NODE_NUM, 20000,
-                                                                self.MIN_RUNNING_TIMES, self.MAX_RUNNING_TIMES,
-                                                                self.max_ttl, lap_noise_scale)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景1 EP ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_EP'
-        tmpscenario = DTNScenario_EP(tmp_senario_name, self.MAX_NODE_NUM, 20000,  self.max_ttl)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景2 Prophet ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_Prophet'
-        tmpscenario = DTNScenario_Prophet(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景3 SandW ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_SandW'
-        init_token = 8
-        tmpscenario = DTNScenario_SandW(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.max_ttl, init_token)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景4 _DAS ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_DAS'
-        init_token = 8
-        tmpscenario = DTNScenario_DAS(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl, init_token)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
-        # ===============================场景5 DAS ===================================
-        index += 1
-        tmp_senario_name = 'scenario' + str(index) + '_Smart'
-        tmpscenario = DTNScenario_SMART(tmp_senario_name, self.MAX_NODE_NUM, 20000, self.MIN_RUNNING_TIMES, self.max_ttl)
-        self.scenaDict.update({tmp_senario_name: tmpscenario})
-
         # ===============================场景单个单个的实验吧===================================
         list_scena = list(self.scenaDict.keys())
         return list_scena
@@ -317,9 +222,10 @@ if __name__ == "__main__":
 
     # result file path
     short_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    result_file_path = "res_oppnet_varygen_V2_" + short_time + ".csv"
+    result_file_path = "res_oppnet_varygen_qiaobeidata_" + short_time + ".csv"
 
-    genpkt_freqlist = [60 * 60, 1200, 600, 400, 300, 240, 200]
+    # genpkt_freqlist = [120*60]
+    genpkt_freqlist = [60 * 60, 20 * 60, 10 * 60, 400, 5 * 60, 200]
     # 10个mins
     num_run = 1
     for i in range(num_run):
@@ -338,4 +244,3 @@ if __name__ == "__main__":
     print(t2)
     print('running time:{}'.format(t2 - t1))
     print(simdurationlist)
-
