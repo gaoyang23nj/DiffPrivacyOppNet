@@ -34,7 +34,12 @@ For example, conducting
 will present the varying routing performace with the increasing TTL
 (the message time lifespan or the message time-to-live).
 
+The verison of the ONE simulator, which supports the one-way connection (message transmission)
+is provided in [here](
+https://github.com/gaoyang23nj/DiffPrivacyOppNet/tree/main/05-the-one-master
+). 
+
 # Figuring
 [The figuring programs in this folder](
-https://github.com/gaoyang23nj/DiffPrivacyOppNet/tree/main/01-code/RevisedVersion_EXP
+https://github.com/gaoyang23nj/DiffPrivacyOppNet/tree/main/01-code/Figuring
 ) is the '*.m' file, which should be conducted by Matlab.
